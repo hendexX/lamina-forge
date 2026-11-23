@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import {
+  ChevronDown,
   Dices,
   Eraser,
   Image as ImageIcon,
@@ -11,12 +12,12 @@ import {
   X,
 } from 'lucide-react';
 import { useStudioStore } from '../store/useStudioStore';
-import { PRESET_CONFIG, PresetType, RESOLUTION_OPTIONS } from '../types/studio';
+import { MODEL_STYLES, ModelStyle, RESOLUTION_OPTIONS } from '../types/studio';
 
 const SAMPLE_PROMPTS = [
-  'Equine hoof anatomical cross-section, clinical studio lighting',
-  'Stylized medieval alchemy lantern, clean studio backdrop',
-  'Canine skull veterinary teaching model, matte ivory finish',
+  'Equine hoof anatomical cross-section',
+  'Stylized brass alchemy lantern',
+  'Canine skull teaching model',
 ];
 
 const PIPELINE_STAGES = [
@@ -24,6 +25,13 @@ const PIPELINE_STAGES = [
   'Generating O-Voxel Geometry',
   'Baking PBR Textures',
   'Optimizing Mesh',
+];
+
+const POLYCOUNT_PILLS = [
+  { label: 'Low 8k', value: 8000 },
+  { label: 'Balanced 15k', value: 15000 },
+  { label: 'High 30k', value: 30000 },
+  { label: 'Max 45k', value: 45000 },
 ];
 
 export const CreationDock: React.FC = () => {
@@ -59,6 +67,7 @@ export const CreationDock: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const isDark = theme === 'dark';
+  const activeStyle = MODEL_STYLES[preset] || MODEL_STYLES.organic_anatomy;
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith('image/')) return;
@@ -78,8 +87,7 @@ export const CreationDock: React.FC = () => {
 
   const loadSampleReference = async () => {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-      <rect width="512" height="512" fill="#F1F5F9"/>
-      <ellipse cx="256" cy="404" rx="110" ry="20" fill="#94A3B8" opacity="0.35"/>
+      <rect width="512" height="512" fill="#FFFFFF"/>
       <path d="M256 96 C340 112 384 188 358 278 C336 350 296 388 256 392 C216 388 176 350 154 278 C128 188 172 112 256 96 Z" fill="#D6C5B8" stroke="#8C7667" stroke-width="6"/>
       <ellipse cx="220" cy="186" rx="28" ry="48" fill="#FFFFFF" opacity="0.35" transform="rotate(-15 220 186)"/>
     </svg>`;
@@ -91,30 +99,30 @@ export const CreationDock: React.FC = () => {
 
   return (
     <aside
-      className={`w-[320px] xl:w-[344px] shrink-0 border-r flex flex-col h-full overflow-hidden transition-colors ${
+      className={`w-[320px] xl:w-[344px] shrink-0 rounded-3xl border backdrop-blur-2xl flex flex-col h-full overflow-hidden transition-all duration-200 shadow-[0_20px_50px_rgba(0,0,0,0.12)] ${
         isDark
-          ? 'bg-[#0D1526] border-slate-800/80 text-slate-100'
-          : 'bg-white border-slate-200 text-slate-900'
+          ? 'bg-neutral-900/65 border-white/10 text-neutral-100'
+          : 'bg-white/70 border-white/50 text-neutral-900'
       }`}
     >
-      {/* Mode Switcher */}
-      <div className={`p-3.5 border-b ${isDark ? 'border-slate-800/80' : 'border-slate-200'}`}>
+      {/* Mode Segmented Control */}
+      <div className={`p-3.5 border-b ${isDark ? 'border-white/[0.08]' : 'border-black/[0.06]'}`}>
         <div
           className={`grid grid-cols-2 p-1 rounded-xl ${
-            isDark ? 'bg-slate-900/90' : 'bg-slate-100'
+            isDark ? 'bg-black/35' : 'bg-black/[0.05]'
           }`}
         >
           <button
             type="button"
             onClick={() => setMode('image_to_3d')}
-            className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center justify-center gap-1.5 py-2 rounded-[10px] text-xs font-semibold transition-all duration-200 ${
               mode === 'image_to_3d'
                 ? isDark
-                  ? 'bg-slate-800 text-sky-300 shadow-sm'
-                  : 'bg-white text-sky-700 shadow-sm'
+                  ? 'bg-[#0A84FF] text-white shadow-sm'
+                  : 'bg-[#0071E3] text-white shadow-sm'
                 : isDark
-                  ? 'text-slate-400 hover:text-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'text-neutral-400 hover:text-neutral-100'
+                  : 'text-neutral-600 hover:text-neutral-900'
             }`}
           >
             <ImageIcon className="w-3.5 h-3.5" />
@@ -123,14 +131,14 @@ export const CreationDock: React.FC = () => {
           <button
             type="button"
             onClick={() => setMode('text_to_3d')}
-            className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center justify-center gap-1.5 py-2 rounded-[10px] text-xs font-semibold transition-all duration-200 ${
               mode === 'text_to_3d'
                 ? isDark
-                  ? 'bg-slate-800 text-sky-300 shadow-sm'
-                  : 'bg-white text-sky-700 shadow-sm'
+                  ? 'bg-[#0A84FF] text-white shadow-sm'
+                  : 'bg-[#0071E3] text-white shadow-sm'
                 : isDark
-                  ? 'text-slate-400 hover:text-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'text-neutral-400 hover:text-neutral-100'
+                  : 'text-neutral-600 hover:text-neutral-900'
             }`}
           >
             <Type className="w-3.5 h-3.5" />
@@ -140,25 +148,25 @@ export const CreationDock: React.FC = () => {
       </div>
 
       {/* Scrollable Controls */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-5">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
         {/* Text-to-3D Prompt Box */}
         {mode === 'text_to_3d' && (
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wider opacity-70">
+              <label className="text-[11px] font-semibold uppercase tracking-[0.06em] opacity-60">
                 Reference Prompt
               </label>
-              <span className="text-[10px] font-mono opacity-60">Gemini / Imagen</span>
+              <span className="text-[10px] font-medium opacity-50">Gemini Image</span>
             </div>
             <textarea
               rows={3}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe the 3D subject (e.g., equine hoof cross-section, smooth clinical lighting)..."
-              className={`w-full rounded-xl border p-2.5 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-sky-500/40 ${
+              placeholder="Describe the 3D object (e.g., stylized brass lantern, clean watertight form)..."
+              className={`w-full rounded-xl border p-3 text-xs resize-none transition-all duration-200 focus:outline-none focus:ring-2 ${
                 isDark
-                  ? 'bg-slate-900/80 border-slate-700/80 text-slate-100 placeholder:text-slate-500'
-                  : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400'
+                  ? 'bg-white/[0.05] border-white/10 text-neutral-100 placeholder:text-neutral-500 focus:ring-[#0A84FF]/40 focus:border-[#0A84FF]/60'
+                  : 'bg-white/80 border-black/10 text-neutral-900 placeholder:text-neutral-400 focus:ring-[#0071E3]/30 focus:border-[#0071E3]/60'
               }`}
             />
             <div className="flex flex-wrap gap-1.5">
@@ -167,13 +175,13 @@ export const CreationDock: React.FC = () => {
                   key={idx}
                   type="button"
                   onClick={() => setPrompt(sample)}
-                  className={`text-[10px] px-2 py-1 rounded-md border truncate max-w-full transition-colors ${
+                  className={`text-[10px] px-2.5 py-1 rounded-full border truncate max-w-full transition-colors duration-200 ${
                     isDark
-                      ? 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      ? 'bg-white/[0.04] border-white/10 text-neutral-400 hover:text-neutral-100 hover:bg-white/[0.08]'
+                      : 'bg-black/[0.03] border-black/[0.07] text-neutral-600 hover:bg-black/[0.07]'
                   }`}
                 >
-                  {sample.slice(0, 34)}...
+                  {sample}
                 </button>
               ))}
             </div>
@@ -181,10 +189,10 @@ export const CreationDock: React.FC = () => {
               type="button"
               disabled={isGeneratingRef || !prompt.trim()}
               onClick={synthesizeReferenceImage}
-              className={`w-full py-2 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 ${
+              className={`w-full py-2.5 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all duration-200 disabled:opacity-45 ${
                 isDark
-                  ? 'bg-slate-800/80 border-slate-700 text-sky-300 hover:bg-slate-800'
-                  : 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'
+                  ? 'bg-white/[0.07] border-white/15 text-[#0A84FF] hover:bg-white/[0.12]'
+                  : 'bg-[#0071E3]/10 border-[#0071E3]/20 text-[#0071E3] hover:bg-[#0071E3]/15'
               }`}
             >
               {isGeneratingRef ? (
@@ -192,7 +200,7 @@ export const CreationDock: React.FC = () => {
               ) : (
                 <Wand2 className="w-3.5 h-3.5" />
               )}
-              {isGeneratingRef ? 'Synthesizing Reference...' : 'Generate Studio Reference Image'}
+              {isGeneratingRef ? 'Synthesizing Reference...' : 'Generate Studio Reference'}
             </button>
           </div>
         )}
@@ -200,14 +208,16 @@ export const CreationDock: React.FC = () => {
         {/* Image Dropzone / Reference Preview */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold uppercase tracking-wider opacity-70">
+            <label className="text-[11px] font-semibold uppercase tracking-[0.06em] opacity-60">
               {mode === 'text_to_3d' ? 'Reference Preview' : 'Source Image'}
             </label>
             {!imagePreviewUrl && mode === 'image_to_3d' && (
               <button
                 type="button"
                 onClick={loadSampleReference}
-                className="text-[11px] font-medium text-sky-400 hover:text-sky-300 transition-colors"
+                className={`text-[11px] font-medium transition-colors ${
+                  isDark ? 'text-[#0A84FF] hover:text-blue-300' : 'text-[#0071E3] hover:text-blue-700'
+                }`}
               >
                 Load sample
               </button>
@@ -222,16 +232,16 @@ export const CreationDock: React.FC = () => {
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
             onClick={() => !imagePreviewUrl && fileInputRef.current?.click()}
-            className={`relative rounded-xl border-2 border-dashed transition-all overflow-hidden ${
+            className={`relative rounded-2xl border transition-all duration-200 overflow-hidden ${
               isDragging
-                ? 'border-sky-400 bg-sky-500/10'
+                ? 'border-[#0A84FF] bg-[#0A84FF]/10'
                 : imagePreviewUrl
                   ? isDark
-                    ? 'border-slate-700/80 bg-slate-900/60'
-                    : 'border-slate-300 bg-slate-50'
+                    ? 'border-white/10 bg-black/30'
+                    : 'border-black/10 bg-white/80'
                   : isDark
-                    ? 'border-slate-700/80 bg-slate-900/40 hover:border-slate-600 cursor-pointer'
-                    : 'border-slate-300 bg-slate-50 hover:border-slate-400 cursor-pointer'
+                    ? 'border-dashed border-white/15 bg-white/[0.03] hover:border-white/30 cursor-pointer'
+                    : 'border-dashed border-black/15 bg-white/50 hover:border-black/30 cursor-pointer'
             }`}
           >
             <input
@@ -247,15 +257,14 @@ export const CreationDock: React.FC = () => {
             />
 
             {imagePreviewUrl ? (
-              <div className="relative aspect-[4/3] w-full flex items-center justify-center p-2">
-                {/* Checkerboard backdrop when rembg is active */}
+              <div className="relative aspect-[4/3] w-full flex items-center justify-center p-2.5">
                 <div
-                  className="absolute inset-0 opacity-20"
+                  className="absolute inset-0 opacity-15"
                   style={
                     removeBg
                       ? {
                           backgroundImage:
-                            'linear-gradient(45deg, #64748b 25%, transparent 25%), linear-gradient(-45deg, #64748b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #64748b 75%), linear-gradient(-45deg, transparent 75%, #64748b 75%)',
+                            'linear-gradient(45deg, #8e8e93 25%, transparent 25%), linear-gradient(-45deg, #8e8e93 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #8e8e93 75%), linear-gradient(-45deg, transparent 75%, #8e8e93 75%)',
                           backgroundSize: '14px 14px',
                           backgroundPosition: '0 0, 0 7px, 7px -7px, -7px 0',
                         }
@@ -265,7 +274,7 @@ export const CreationDock: React.FC = () => {
                 <img
                   src={imagePreviewUrl}
                   alt="Reference preview"
-                  className="relative max-h-full max-w-full object-contain rounded-lg"
+                  className="relative max-h-full max-w-full object-contain rounded-xl"
                 />
                 <button
                   type="button"
@@ -274,55 +283,93 @@ export const CreationDock: React.FC = () => {
                     setImageFile(null, null);
                   }}
                   aria-label="Clear image"
-                  className="absolute top-2 right-2 p-1 rounded-lg bg-slate-950/75 text-slate-200 hover:bg-rose-600 transition-colors"
+                  className="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-black/65 backdrop-blur-md text-white hover:bg-rose-500 transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
                 {imageFile && (
-                  <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-950/75 text-[10px] font-mono text-slate-200 truncate max-w-[82%]">
+                  <div className="absolute bottom-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] text-white/90 truncate max-w-[82%]">
                     {imageFile.name}
                   </div>
                 )}
               </div>
             ) : (
               <div className="py-7 px-4 text-center">
-                <Upload className="w-6 h-6 mx-auto mb-2 text-sky-400 opacity-85" />
+                <Upload
+                  className={`w-6 h-6 mx-auto mb-2 ${isDark ? 'text-[#0A84FF]' : 'text-[#0071E3]'}`}
+                  strokeWidth={1.8}
+                />
                 <p className="text-xs font-medium">Drop PNG, JPG, or WebP</p>
-                <p className={`text-[11px] mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                <p className={`text-[11px] mt-1 ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
                   Click to browse or drag an image here
                 </p>
               </div>
             )}
           </div>
 
-          {/* Automatic Background Removal Toggle */}
+          {/* Auto Background Removal Toggle */}
           <label
-            className={`flex items-center justify-between px-3 py-2 rounded-xl border cursor-pointer select-none ${
+            className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border cursor-pointer select-none transition-colors duration-200 ${
               isDark
-                ? 'bg-slate-900/50 border-slate-800/90 hover:border-slate-700'
-                : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                ? 'bg-white/[0.04] border-white/10 hover:bg-white/[0.07]'
+                : 'bg-white/60 border-black/[0.07] hover:bg-white/90'
             }`}
           >
             <span className="flex items-center gap-2 text-xs font-medium">
-              <Eraser className="w-3.5 h-3.5 text-sky-400" />
-              Auto Remove Background
-              <span className="text-[10px] font-mono opacity-60">(rembg)</span>
+              <Eraser className={`w-3.5 h-3.5 ${isDark ? 'text-[#0A84FF]' : 'text-[#0071E3]'}`} />
+              Remove Background
             </span>
             <input
               type="checkbox"
               checked={removeBg}
               onChange={(e) => setRemoveBg(e.target.checked)}
-              className="accent-sky-500 w-4 h-4 rounded"
+              className="accent-[#0071E3] dark:accent-[#0A84FF] w-4 h-4 rounded"
             />
           </label>
         </div>
 
-        {/* Resolution / Voxel Grid */}
+        {/* Model Style Dropdown */}
         <div className="space-y-2">
-          <label className="text-xs font-semibold uppercase tracking-wider opacity-70">
-            Resolution / Voxel Grid
+          <label className="text-[11px] font-semibold uppercase tracking-[0.06em] opacity-60">
+            Model Style
           </label>
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="relative">
+            <select
+              value={preset}
+              onChange={(e) => setPreset(e.target.value as ModelStyle)}
+              className={`w-full appearance-none rounded-xl border px-3.5 py-2.5 pr-9 text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 ${
+                isDark
+                  ? 'bg-white/[0.06] border-white/10 text-neutral-100 focus:ring-[#0A84FF]/40'
+                  : 'bg-white/80 border-black/10 text-neutral-900 focus:ring-[#0071E3]/30'
+              }`}
+            >
+              {(Object.keys(MODEL_STYLES) as ModelStyle[]).map((styleKey) => (
+                <option
+                  key={styleKey}
+                  value={styleKey}
+                  className={isDark ? 'bg-neutral-900 text-neutral-100' : 'bg-white text-neutral-900'}
+                >
+                  {MODEL_STYLES[styleKey].label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-55" />
+          </div>
+          <p className={`text-[11px] leading-relaxed ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+            {activeStyle.description}
+          </p>
+        </div>
+
+        {/* Quality / Voxel Grid */}
+        <div className="space-y-2">
+          <label className="text-[11px] font-semibold uppercase tracking-[0.06em] opacity-60">
+            Quality
+          </label>
+          <div
+            className={`grid grid-cols-3 p-1 rounded-xl gap-1 ${
+              isDark ? 'bg-black/35' : 'bg-black/[0.05]'
+            }`}
+          >
             {RESOLUTION_OPTIONS.map((opt) => {
               const active = resolution === opt.value;
               return (
@@ -330,53 +377,20 @@ export const CreationDock: React.FC = () => {
                   key={opt.value}
                   type="button"
                   onClick={() => setResolution(opt.value)}
-                  className={`py-2 px-1.5 rounded-xl border text-center transition-all ${
+                  className={`py-2 px-1.5 rounded-[10px] text-center transition-all duration-200 ${
                     active
-                      ? 'border-sky-500 bg-sky-500/15 text-sky-400'
+                      ? isDark
+                        ? 'bg-[#0A84FF] text-white shadow-sm'
+                        : 'bg-[#0071E3] text-white shadow-sm'
                       : isDark
-                        ? 'border-slate-800 bg-slate-900/50 text-slate-300 hover:border-slate-700'
-                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
+                        ? 'text-neutral-300 hover:bg-white/[0.06]'
+                        : 'text-neutral-700 hover:bg-white/70'
                   }`}
                 >
-                  <div className="text-xs font-mono font-bold">{opt.label}</div>
-                  <div className="text-[10px] opacity-75 mt-0.5">{opt.tag}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Target Use Preset */}
-        <div className="space-y-2">
-          <label className="text-xs font-semibold uppercase tracking-wider opacity-70">
-            Target Use Preset
-          </label>
-          <div className="space-y-1.5">
-            {(Object.keys(PRESET_CONFIG) as PresetType[]).map((key) => {
-              const cfg = PRESET_CONFIG[key];
-              const active = preset === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setPreset(key)}
-                  className={`w-full text-left p-2.5 rounded-xl border transition-all ${
-                    active
-                      ? 'border-sky-500 bg-sky-500/12'
-                      : isDark
-                        ? 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
-                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-semibold ${active ? 'text-sky-400' : ''}`}>
-                      {cfg.label}
-                    </span>
-                    {active && <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />}
+                  <div className="text-xs font-semibold tabular-nums">{opt.label}</div>
+                  <div className={`text-[10px] mt-0.5 ${active ? 'text-white/85' : 'opacity-60'}`}>
+                    {opt.tag}
                   </div>
-                  <p className={`text-[11px] mt-0.5 leading-snug ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {cfg.description}
-                  </p>
                 </button>
               );
             })}
@@ -384,12 +398,16 @@ export const CreationDock: React.FC = () => {
         </div>
 
         {/* Target Polycount (Triangles) Slider */}
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold uppercase tracking-wider opacity-70">
-              Target Polycount (Triangles)
+            <label className="text-[11px] font-semibold uppercase tracking-[0.06em] opacity-60">
+              Target Polycount
             </label>
-            <span className="text-xs font-mono font-semibold text-sky-400">
+            <span
+              className={`text-xs font-semibold tabular-nums ${
+                isDark ? 'text-[#0A84FF]' : 'text-[#0071E3]'
+              }`}
+            >
               {targetTris.toLocaleString()} tris
             </span>
           </div>
@@ -400,31 +418,24 @@ export const CreationDock: React.FC = () => {
             step={1000}
             value={Math.min(Math.max(targetTris, 5000), 45000)}
             onChange={(e) => setTargetTris(Number(e.target.value))}
-            className={`w-full studio-slider ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}
+            className={`w-full studio-slider ${isDark ? 'bg-white/15' : 'bg-black/15'}`}
           />
-          <div className="flex justify-between text-[10px] font-mono opacity-55">
-            <span>5,000</span>
-            <span>45,000 max</span>
-          </div>
-          <div className="grid grid-cols-4 gap-1.5 pt-0.5">
-            {[
-              { label: 'Low 8k', value: 8000 },
-              { label: 'Balanced 15k', value: 15000 },
-              { label: 'High 30k', value: 30000 },
-              { label: 'Max 45k', value: 45000 },
-            ].map((pill) => {
+          <div className="grid grid-cols-4 gap-1.5">
+            {POLYCOUNT_PILLS.map((pill) => {
               const active = targetTris === pill.value;
               return (
                 <button
                   key={pill.value}
                   type="button"
                   onClick={() => setTargetTris(pill.value)}
-                  className={`py-1 px-1 rounded-lg border text-[10px] font-medium transition-all ${
+                  className={`py-1.5 px-1 rounded-full border text-[10px] font-medium tabular-nums transition-all duration-200 ${
                     active
-                      ? 'border-sky-500 bg-sky-500/15 text-sky-400'
+                      ? isDark
+                        ? 'border-[#0A84FF] bg-[#0A84FF]/20 text-[#0A84FF]'
+                        : 'border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]'
                       : isDark
-                        ? 'border-slate-800 bg-slate-900/50 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
+                        ? 'border-white/10 bg-white/[0.04] text-neutral-400 hover:text-neutral-100 hover:bg-white/[0.08]'
+                        : 'border-black/[0.07] bg-white/60 text-neutral-600 hover:bg-white'
                   }`}
                 >
                   {pill.label}
@@ -436,26 +447,28 @@ export const CreationDock: React.FC = () => {
 
         {/* Seed */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wider opacity-70">Seed</label>
+          <label className="text-[11px] font-semibold uppercase tracking-[0.06em] opacity-60">
+            Seed
+          </label>
           <div className="flex gap-2">
             <input
               type="number"
               value={seed}
               onChange={(e) => setSeed(Number(e.target.value))}
-              className={`flex-1 px-3 py-2 rounded-xl border text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500/40 ${
+              className={`flex-1 px-3.5 py-2 rounded-xl border text-xs tabular-nums transition-all duration-200 focus:outline-none focus:ring-2 ${
                 isDark
-                  ? 'bg-slate-900/80 border-slate-700/80 text-slate-100'
-                  : 'bg-slate-50 border-slate-300 text-slate-900'
+                  ? 'bg-white/[0.05] border-white/10 text-neutral-100 focus:ring-[#0A84FF]/40'
+                  : 'bg-white/80 border-black/10 text-neutral-900 focus:ring-[#0071E3]/30'
               }`}
             />
             <button
               type="button"
               onClick={randomizeSeed}
               title="Randomize Seed"
-              className={`px-3 rounded-xl border transition-colors ${
+              className={`px-3 rounded-xl border transition-all duration-200 ${
                 isDark
-                  ? 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800'
-                  : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-white/[0.05] border-white/10 text-neutral-300 hover:text-white hover:bg-white/[0.10]'
+                  : 'bg-white/80 border-black/10 text-neutral-700 hover:bg-white'
               }`}
             >
               <Dices className="w-4 h-4" />
@@ -464,23 +477,31 @@ export const CreationDock: React.FC = () => {
         </div>
 
         {error && (
-          <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+          <div className="p-3 rounded-xl bg-rose-500/12 border border-rose-500/25 text-rose-500 dark:text-rose-300 text-xs">
             {error}
           </div>
         )}
       </div>
 
       {/* Generate CTA & Progress Footer */}
-      <div className={`p-4 border-t space-y-3 ${isDark ? 'border-slate-800/80' : 'border-slate-200'}`}>
+      <div
+        className={`p-4 border-t space-y-3 ${isDark ? 'border-white/[0.08]' : 'border-black/[0.06]'}`}
+      >
         {isGenerating && (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="font-medium text-sky-400">{currentStage || 'Processing...'}</span>
-              <span className="font-mono opacity-75">{progress}%</span>
+              <span className={`font-medium ${isDark ? 'text-[#0A84FF]' : 'text-[#0071E3]'}`}>
+                {currentStage || 'Processing...'}
+              </span>
+              <span className="tabular-nums opacity-70">{progress}%</span>
             </div>
-            <div className={`h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+            <div
+              className={`h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-white/10' : 'bg-black/10'}`}
+            >
               <div
-                className="h-full bg-gradient-to-r from-sky-400 to-blue-500 transition-all duration-300"
+                className={`h-full rounded-full transition-all duration-300 ${
+                  isDark ? 'bg-[#0A84FF]' : 'bg-[#0071E3]'
+                }`}
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -491,8 +512,14 @@ export const CreationDock: React.FC = () => {
                 return (
                   <div
                     key={stg}
-                    className={`h-1 rounded-full ${
-                      active ? 'bg-sky-400' : isDark ? 'bg-slate-800' : 'bg-slate-200'
+                    className={`h-1 rounded-full transition-colors duration-200 ${
+                      active
+                        ? isDark
+                          ? 'bg-[#0A84FF]'
+                          : 'bg-[#0071E3]'
+                        : isDark
+                          ? 'bg-white/10'
+                          : 'bg-black/10'
                     }`}
                     title={stg}
                   />
@@ -506,12 +533,16 @@ export const CreationDock: React.FC = () => {
           type="button"
           disabled={isGenerating}
           onClick={startGeneration}
-          className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-300 hover:to-blue-400 text-slate-950 shadow-lg shadow-sky-500/20 flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+          className={`w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-white shadow-lg flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-55 ${
+            isDark
+              ? 'bg-[#0A84FF] hover:bg-[#1E90FF] shadow-[#0A84FF]/25'
+              : 'bg-[#0071E3] hover:bg-[#0077ED] shadow-[#0071E3]/25'
+          }`}
         >
           {isGenerating ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Generating 3D Mesh...
+              Generating 3D Asset...
             </>
           ) : (
             <>

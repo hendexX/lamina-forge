@@ -388,14 +388,32 @@ class TrellisRunner:
         # Patch DINOv3 feature extractor for transformers v4/v5 compatibility
         _patch_dinov3_feature_extractor(self._pipeline)
 
-        # Wrap internal rembg_model in a module-like object supporting .to()/.cuda()/.cpu()
+        # Cast BiRefNet / rembg_model to float32 before wrapping so GPU inference never fails
+        # with "Input type (float) and bias type (c10::Half) should be the same"
         if hasattr(self._pipeline, "rembg_model"):
             orig_rembg = self._pipeline.rembg_model
+            if orig_rembg is not None:
+                try:
+                    if hasattr(orig_rembg, "float"):
+                        orig_rembg.float()
+                    elif hasattr(orig_rembg, "model") and hasattr(orig_rembg.model, "float"):
+                        orig_rembg.model.float()
+                except Exception as cast_exc:
+                    logger.debug("Could not cast rembg_model to float32: %s", cast_exc)
             self._pipeline._lamina_orig_rembg = orig_rembg
             self._pipeline.rembg_model = _SafeRembgFallback(orig_rembg)
 
         if self._device == "cuda":
             self._pipeline.cuda()
+            rembg_inner = getattr(self._pipeline, "_lamina_orig_rembg", None)
+            if rembg_inner is not None:
+                try:
+                    if hasattr(rembg_inner, "float"):
+                        rembg_inner.float()
+                    elif hasattr(rembg_inner, "model") and hasattr(rembg_inner.model, "float"):
+                        rembg_inner.model.float()
+                except Exception:
+                    pass
 
         logger.info("TRELLIS.2-4B pipeline ready.")
 
@@ -469,7 +487,7 @@ class TrellisRunner:
                     attr_layout=attr_layout,
                     voxel_size=mesh_out.voxel_size,
                     aabb=[[-0.5, -0.5, -0.5], [0.5, 0.5, 0.5]],
-                    decimation_target=target_tris,
+                    decimation_target=min(max(target_tris * 3, 60000), 180000),
                     texture_size=texture_size,
                     remesh=True,
                 )

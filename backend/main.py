@@ -131,9 +131,9 @@ async def text_to_image(
     """
     api_key = x_gemini_api_key or os.environ.get("GEMINI_API_KEY", "").strip()
     studio_prompt = (
-        f"Studio 3D product photography of {req.prompt}, centered single object, "
-        f"soft diffused three-point studio lighting, clean solid light gray seamless background (#F2F4F7), "
-        f"sharp focus, orthographic 3/4 view, no text, no watermark."
+        f"3D asset render of {req.prompt}, single solid watertight object centered in frame, "
+        f"three-quarter perspective view, matte-to-satin PBR materials, soft even studio lighting, "
+        f"pure solid #FFFFFF background with zero glow, zero smoke, zero ground shadow, crisp silhouette."
     )
 
     if api_key:

@@ -20,13 +20,17 @@ export const App: React.FC = () => {
 
   return (
     <div
-      className={`h-screen w-screen flex flex-col overflow-hidden ${
-        isDark ? 'bg-[#0F172A] text-slate-100' : 'bg-[#F6F7F9] text-slate-900'
+      className={`h-screen w-screen flex flex-col overflow-hidden transition-colors duration-200 ${
+        isDark
+          ? 'bg-gradient-to-b from-[#111113] to-[#1C1C1E] text-neutral-100'
+          : 'bg-gradient-to-b from-[#F5F5F7] to-[#E8E8ED] text-neutral-900'
       }`}
     >
-      <TopBar />
+      <div className="px-3 pt-3 shrink-0 z-20">
+        <TopBar />
+      </div>
 
-      <div className="flex-1 flex min-h-0 overflow-hidden">
+      <div className="flex-1 flex min-h-0 overflow-hidden p-3 gap-3">
         <CreationDock />
         <Viewport3D />
         <AssetDrawer />
@@ -34,23 +38,21 @@ export const App: React.FC = () => {
 
       <SettingsModal />
 
-      {/* Toast Notification */}
+      {/* Apple-style Frosted Glass Toast */}
       {toast && (
         <div
-          className={`fixed bottom-20 right-6 z-50 flex items-center gap-2 px-3.5 py-2.5 rounded-xl border shadow-xl text-xs font-medium backdrop-blur-md ${
-            toast.type === 'success'
-              ? 'bg-emerald-950/90 border-emerald-500/40 text-emerald-200'
-              : toast.type === 'error'
-                ? 'bg-rose-950/90 border-rose-500/40 text-rose-200'
-                : 'bg-slate-900/90 border-slate-700 text-slate-200'
+          className={`fixed bottom-20 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-full border shadow-[0_20px_50px_rgba(0,0,0,0.18)] text-xs font-medium backdrop-blur-2xl transition-all duration-200 ${
+            isDark
+              ? 'bg-neutral-900/80 border-white/15 text-neutral-100'
+              : 'bg-white/85 border-white/60 text-neutral-900'
           }`}
         >
           {toast.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
           ) : toast.type === 'error' ? (
-            <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
           ) : (
-            <Info className="w-4 h-4 text-sky-400 shrink-0" />
+            <Info className="w-4 h-4 text-[#0A84FF] shrink-0" />
           )}
           <span>{toast.text}</span>
         </div>

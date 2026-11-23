@@ -6,21 +6,21 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import {
   Box,
+  CircleDot,
   Grid3X3,
   Layers,
   RotateCcw,
   RotateCw,
   Ruler,
   Triangle,
-  CircleDot,
 } from 'lucide-react';
 import { useStudioStore } from '../store/useStudioStore';
-import { PbrChannel, PRESET_CONFIG, PresetType } from '../types/studio';
+import { getStyleShortLabel, PbrChannel } from '../types/studio';
 
 const CHANNEL_OPTIONS: { id: PbrChannel; label: string }[] = [
   { id: 'full_pbr', label: 'Full PBR' },
   { id: 'albedo', label: 'Albedo' },
-  { id: 'clay', label: 'Clay / Matcap' },
+  { id: 'clay', label: 'Clay' },
   { id: 'roughness_metallic', label: 'Rough / Metal' },
 ];
 
@@ -39,7 +39,7 @@ const LoadedModel: React.FC<LoadedModelProps> = ({ url, pbrChannel, wireframe, i
   const clayMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#d8dee9',
+        color: '#e5e5ea',
         roughness: 0.78,
         metalness: 0.04,
       }),
@@ -49,10 +49,10 @@ const LoadedModel: React.FC<LoadedModelProps> = ({ url, pbrChannel, wireframe, i
   const wireMaterial = useMemo(
     () =>
       new THREE.MeshBasicMaterial({
-        color: isDark ? '#38bdf8' : '#0284c7',
+        color: isDark ? '#0A84FF' : '#0071E3',
         wireframe: true,
         transparent: true,
-        opacity: 0.34,
+        opacity: 0.32,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -1,
@@ -118,7 +118,6 @@ const LoadedModel: React.FC<LoadedModelProps> = ({ url, pbrChannel, wireframe, i
     };
   }, [url, setLiveMeshStats, setActiveSceneObject]);
 
-  // Apply PBR Channel Inspector & Wireframe Overlay
   useEffect(() => {
     if (!sceneGroup) return;
 
@@ -130,7 +129,6 @@ const LoadedModel: React.FC<LoadedModelProps> = ({ url, pbrChannel, wireframe, i
         const mesh = obj as THREE.Mesh;
         const origMat = mesh.userData.__origMaterial as THREE.Material | THREE.Material[] | undefined;
 
-        // Remove any previous wireframe overlay child
         const existingWire = mesh.children.find((c) => c.userData.__isWireOverlay);
         if (existingWire) {
           mesh.remove(existingWire);
@@ -236,28 +234,33 @@ export const Viewport3D: React.FC = () => {
   } = useStudioStore();
 
   const isDark = theme === 'dark';
-  const bgHex = isDark ? '#0F172A' : '#F6F7F9';
+  const fogHex = isDark ? '#161618' : '#EFEFF4';
   const activeAsset = assets.find((a) => a.id === activeAssetId);
-  const activePresetLabel = activeAsset
-    ? PRESET_CONFIG[activeAsset.preset as PresetType]?.shortLabel
-    : null;
+  const activeStyleLabel = activeAsset ? getStyleShortLabel(activeAsset.preset) : null;
 
   return (
     <main
-      className="relative flex-1 h-full overflow-hidden select-none"
-      style={{ backgroundColor: bgHex }}
+      className={`relative flex-1 h-full rounded-3xl border overflow-hidden select-none transition-all duration-200 shadow-[0_20px_50px_rgba(0,0,0,0.10)] ${
+        isDark
+          ? 'bg-gradient-to-b from-[#111113] to-[#1C1C1E] border-white/10'
+          : 'bg-gradient-to-b from-[#F5F5F7] to-[#E8E8ED] border-white/60'
+      }`}
     >
       {/* Interactive Three.js Canvas */}
       <Canvas
         shadows
         dpr={[1, 2]}
         camera={{ position: [2.4, 1.8, 2.8], fov: 40, near: 0.05, far: 100 }}
-        gl={{ antialias: true, preserveDrawingBuffer: true, toneMapping: THREE.ACESFilmicToneMapping }}
+        gl={{
+          antialias: true,
+          alpha: true,
+          preserveDrawingBuffer: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+        }}
       >
-        <color attach="background" args={[bgHex]} />
-        <fog attach="fog" args={[bgHex, 10, 26]} />
+        <fog attach="fog" args={[fogHex, 11, 26]} />
 
-        {/* Procedural Studio HDRI Lighting (offline-safe Lightformers) */}
+        {/* Procedural Studio HDRI Lighting */}
         <Environment resolution={256}>
           <Lightformer
             form="rect"
@@ -269,8 +272,8 @@ export const Viewport3D: React.FC = () => {
           />
           <Lightformer
             form="rect"
-            intensity={1.6}
-            color="#e0f2fe"
+            intensity={1.5}
+            color="#eef6ff"
             scale={[4, 4, 1]}
             position={[5, 2.5, 4]}
             target={[0, 1, 0]}
@@ -278,41 +281,41 @@ export const Viewport3D: React.FC = () => {
           <Lightformer
             form="rect"
             intensity={1.2}
-            color="#fef3c7"
+            color="#fff7ed"
             scale={[4, 3, 1]}
             position={[-5, 2, -3]}
             target={[0, 1, 0]}
           />
         </Environment>
 
-        <ambientLight intensity={isDark ? 0.35 : 0.55} />
+        <ambientLight intensity={isDark ? 0.4 : 0.6} />
         <directionalLight
           position={[4, 6, 4]}
-          intensity={isDark ? 1.4 : 1.7}
+          intensity={isDark ? 1.4 : 1.6}
           castShadow
           shadow-mapSize={[1024, 1024]}
         />
-        <directionalLight position={[-4, 3, -3]} intensity={0.6} color="#bae6fd" />
+        <directionalLight position={[-4, 3, -3]} intensity={0.55} color="#dbeafe" />
 
-        {/* Studio Cyclorama Grid & Contact Shadows */}
+        {/* Subtle Studio Grid & Contact Shadows */}
         <Grid
           position={[0, 0, 0]}
           args={[16, 16]}
           cellSize={0.5}
-          cellThickness={0.5}
-          cellColor={isDark ? '#1e293b' : '#cbd5e1'}
+          cellThickness={0.45}
+          cellColor={isDark ? '#2c2c2e' : '#d1d1d6'}
           sectionSize={2}
-          sectionThickness={1}
-          sectionColor={isDark ? '#334155' : '#94a3b8'}
+          sectionThickness={0.9}
+          sectionColor={isDark ? '#3a3a3c' : '#aeaeb2'}
           fadeDistance={14}
-          fadeStrength={1.2}
+          fadeStrength={1.3}
           infiniteGrid
         />
         <ContactShadows
           position={[0, 0.002, 0]}
-          opacity={isDark ? 0.55 : 0.35}
+          opacity={isDark ? 0.5 : 0.28}
           scale={8}
-          blur={2.2}
+          blur={2.4}
           far={4}
         />
 
@@ -330,58 +333,74 @@ export const Viewport3D: React.FC = () => {
 
       {/* Empty Viewport Overlay */}
       {!activeGlbUrl && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
           <div
-            className={`px-6 py-5 rounded-2xl border backdrop-blur-md text-center max-w-sm ${
+            className={`px-7 py-6 rounded-3xl border backdrop-blur-2xl text-center max-w-sm shadow-[0_20px_50px_rgba(0,0,0,0.12)] ${
               isDark
-                ? 'bg-slate-900/75 border-slate-700/70 text-slate-200'
-                : 'bg-white/80 border-slate-200 text-slate-800'
+                ? 'bg-neutral-900/65 border-white/10 text-neutral-100'
+                : 'bg-white/75 border-white/60 text-neutral-900'
             }`}
           >
-            <Box className="w-8 h-8 mx-auto mb-2.5 text-sky-400 opacity-90" strokeWidth={1.6} />
-            <h3 className="text-sm font-semibold">Studio Viewport Ready</h3>
-            <p className={`text-xs mt-1 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Drop a reference image or enter a prompt on the left dock to forge a PBR 3D asset with
-              TRELLIS.2-4B.
+            <Box
+              className={`w-8 h-8 mx-auto mb-3 ${isDark ? 'text-[#0A84FF]' : 'text-[#0071E3]'}`}
+              strokeWidth={1.6}
+            />
+            <h3 className="text-sm font-semibold tracking-[-0.01em]">Studio Viewport Ready</h3>
+            <p className={`text-xs mt-1.5 leading-relaxed ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+              Drop a reference image or describe an object on the left dock to generate a clean
+              watertight 3D mesh.
             </p>
           </div>
         </div>
       )}
 
-      {/* Top-Right Live Mesh Stats HUD */}
+      {/* Top-Right Frosted Mesh Stats HUD */}
       {liveMeshStats && (
         <div
-          className={`absolute top-4 right-4 rounded-xl border backdrop-blur-md px-3.5 py-2.5 text-[11px] font-mono space-y-1.5 shadow-lg ${
+          className={`absolute top-4 right-4 rounded-2xl border backdrop-blur-2xl px-4 py-3 text-[11px] tabular-nums space-y-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.12)] ${
             isDark
-              ? 'bg-slate-900/80 border-slate-700/70 text-slate-200'
-              : 'bg-white/85 border-slate-200 text-slate-800'
+              ? 'bg-neutral-900/65 border-white/10 text-neutral-100'
+              : 'bg-white/75 border-white/60 text-neutral-900'
           }`}
         >
-          <div className="flex items-center justify-between gap-4 pb-1 border-b border-current/10">
-            <span className="font-sans font-semibold text-[11px] tracking-wide uppercase opacity-75">
+          <div
+            className={`flex items-center justify-between gap-4 pb-1.5 border-b ${
+              isDark ? 'border-white/10' : 'border-black/[0.06]'
+            }`}
+          >
+            <span className="font-semibold text-[10px] tracking-[0.06em] uppercase opacity-60">
               Mesh Stats
             </span>
-            {activePresetLabel && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-400 font-sans font-medium">
-                {activePresetLabel}
+            {activeStyleLabel && (
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                  isDark
+                    ? 'bg-[#0A84FF]/20 text-[#0A84FF]'
+                    : 'bg-[#0071E3]/10 text-[#0071E3]'
+                }`}
+              >
+                {activeStyleLabel}
               </span>
             )}
           </div>
           <div className="flex items-center justify-between gap-5">
-            <span className="flex items-center gap-1.5 opacity-70">
-              <Triangle className="w-3 h-3 text-sky-400" /> Triangles
+            <span className="flex items-center gap-1.5 opacity-65">
+              <Triangle className={`w-3 h-3 ${isDark ? 'text-[#0A84FF]' : 'text-[#0071E3]'}`} />
+              Triangles
             </span>
             <span className="font-semibold">{liveMeshStats.triangles.toLocaleString()}</span>
           </div>
           <div className="flex items-center justify-between gap-5">
-            <span className="flex items-center gap-1.5 opacity-70">
-              <CircleDot className="w-3 h-3 text-sky-400" /> Vertices
+            <span className="flex items-center gap-1.5 opacity-65">
+              <CircleDot className={`w-3 h-3 ${isDark ? 'text-[#0A84FF]' : 'text-[#0071E3]'}`} />
+              Vertices
             </span>
             <span className="font-semibold">{liveMeshStats.vertices.toLocaleString()}</span>
           </div>
           <div className="flex items-center justify-between gap-5">
-            <span className="flex items-center gap-1.5 opacity-70">
-              <Ruler className="w-3 h-3 text-sky-400" /> Bounds (m)
+            <span className="flex items-center gap-1.5 opacity-65">
+              <Ruler className={`w-3 h-3 ${isDark ? 'text-[#0A84FF]' : 'text-[#0071E3]'}`} />
+              Bounds (m)
             </span>
             <span className="font-semibold">
               {liveMeshStats.width_m.toFixed(2)} × {liveMeshStats.height_m.toFixed(2)} ×{' '}
@@ -391,17 +410,17 @@ export const Viewport3D: React.FC = () => {
         </div>
       )}
 
-      {/* Floating Bottom Viewport Toolbar */}
+      {/* Floating Bottom Frosted Pill Toolbar */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-2 px-3">
         {/* PBR Channel Inspector */}
         <div
-          className={`flex items-center gap-1 p-1 rounded-xl border backdrop-blur-md shadow-lg ${
+          className={`flex items-center gap-1 p-1 rounded-full border backdrop-blur-2xl shadow-[0_16px_40px_rgba(0,0,0,0.14)] ${
             isDark
-              ? 'bg-slate-900/85 border-slate-700/80 text-slate-300'
-              : 'bg-white/90 border-slate-200 text-slate-700'
+              ? 'bg-neutral-900/75 border-white/12 text-neutral-300'
+              : 'bg-white/80 border-white/60 text-neutral-700'
           }`}
         >
-          <Layers className="w-3.5 h-3.5 mx-1.5 opacity-60 hidden sm:block" />
+          <Layers className="w-3.5 h-3.5 mx-2 opacity-55 hidden sm:block" />
           {CHANNEL_OPTIONS.map((ch) => {
             const active = pbrChannel === ch.id;
             return (
@@ -409,12 +428,14 @@ export const Viewport3D: React.FC = () => {
                 key={ch.id}
                 type="button"
                 onClick={() => setPbrChannel(ch.id)}
-                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200 ${
                   active
-                    ? 'bg-sky-500 text-slate-950 font-semibold shadow-sm'
+                    ? isDark
+                      ? 'bg-[#0A84FF] text-white shadow-sm'
+                      : 'bg-[#0071E3] text-white shadow-sm'
                     : isDark
-                      ? 'hover:bg-slate-800 text-slate-300'
-                      : 'hover:bg-slate-100 text-slate-700'
+                      ? 'hover:bg-white/10 text-neutral-300'
+                      : 'hover:bg-black/[0.06] text-neutral-700'
                 }`}
               >
                 {ch.label}
@@ -423,24 +444,26 @@ export const Viewport3D: React.FC = () => {
           })}
         </div>
 
-        {/* Viewport Toggles (Wireframe, Turntable, Reset Camera) */}
+        {/* Viewport Toggles */}
         <div
-          className={`flex items-center gap-1 p-1 rounded-xl border backdrop-blur-md shadow-lg ${
+          className={`flex items-center gap-1 p-1 rounded-full border backdrop-blur-2xl shadow-[0_16px_40px_rgba(0,0,0,0.14)] ${
             isDark
-              ? 'bg-slate-900/85 border-slate-700/80 text-slate-300'
-              : 'bg-white/90 border-slate-200 text-slate-700'
+              ? 'bg-neutral-900/75 border-white/12 text-neutral-300'
+              : 'bg-white/80 border-white/60 text-neutral-700'
           }`}
         >
           <button
             type="button"
             onClick={() => setWireframe(!wireframe)}
             title="Toggle Wireframe Overlay"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200 ${
               wireframe
-                ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
+                ? isDark
+                  ? 'bg-[#0A84FF]/20 text-[#0A84FF]'
+                  : 'bg-[#0071E3]/12 text-[#0071E3]'
                 : isDark
-                  ? 'hover:bg-slate-800'
-                  : 'hover:bg-slate-100'
+                  ? 'hover:bg-white/10'
+                  : 'hover:bg-black/[0.06]'
             }`}
           >
             <Grid3X3 className="w-3.5 h-3.5" />
@@ -451,12 +474,14 @@ export const Viewport3D: React.FC = () => {
             type="button"
             onClick={() => setAutoRotate(!autoRotate)}
             title="Toggle Turntable Auto-Rotate"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200 ${
               autoRotate
-                ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
+                ? isDark
+                  ? 'bg-[#0A84FF]/20 text-[#0A84FF]'
+                  : 'bg-[#0071E3]/12 text-[#0071E3]'
                 : isDark
-                  ? 'hover:bg-slate-800'
-                  : 'hover:bg-slate-100'
+                  ? 'hover:bg-white/10'
+                  : 'hover:bg-black/[0.06]'
             }`}
           >
             <RotateCw className="w-3.5 h-3.5" />
@@ -467,8 +492,8 @@ export const Viewport3D: React.FC = () => {
             type="button"
             onClick={triggerCameraReset}
             title="Reset Camera View"
-            className={`p-1.5 rounded-lg transition-colors ${
-              isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'
+            className={`p-1.5 rounded-full transition-colors duration-200 ${
+              isDark ? 'hover:bg-white/10' : 'hover:bg-black/[0.06]'
             }`}
           >
             <RotateCcw className="w-3.5 h-3.5" />

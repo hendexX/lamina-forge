@@ -50,51 +50,57 @@ export const SettingsModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-md p-4">
       <div
-        className={`w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden ${
+        className={`w-full max-w-lg rounded-3xl border backdrop-blur-2xl shadow-[0_24px_64px_rgba(0,0,0,0.28)] overflow-hidden transition-all duration-200 ${
           isDark
-            ? 'bg-[#0F172A] border-slate-700/80 text-slate-100'
-            : 'bg-white border-slate-200 text-slate-900'
+            ? 'bg-neutral-900/85 border-white/15 text-neutral-100'
+            : 'bg-white/88 border-white/60 text-neutral-900'
         }`}
       >
         {/* Header */}
         <div
-          className={`flex items-center justify-between px-5 py-4 border-b ${
-            isDark ? 'border-slate-800' : 'border-slate-200'
+          className={`flex items-center justify-between px-6 py-4 border-b ${
+            isDark ? 'border-white/10' : 'border-black/[0.06]'
           }`}
         >
           <div>
-            <h2 className="text-sm font-semibold">Inference Backend & API Keys</h2>
-            <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <h2 className="text-sm font-semibold tracking-[-0.01em]">
+              Inference Backend & API Keys
+            </h2>
+            <p className={`text-xs mt-0.5 ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
               Connect to Google Colab (Cloudflare Tunnel), Cloud Run L4, or fal.ai.
             </p>
           </div>
           <button
             type="button"
             onClick={() => setSettingsOpen(false)}
-            className={`p-1.5 rounded-lg transition-colors ${
-              isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+            className={`p-1.5 rounded-full transition-colors ${
+              isDark ? 'hover:bg-white/10 text-neutral-400' : 'hover:bg-black/[0.06] text-neutral-500'
             }`}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSaveAndTest} className="p-5 space-y-4">
+        <form onSubmit={handleSaveAndTest} className="p-6 space-y-4">
           {/* Provider Switcher */}
           <div>
-            <label className="block text-xs font-medium mb-2 opacity-80">Inference Provider</label>
-            <div className="grid grid-cols-2 gap-2">
+            <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-2 opacity-60">
+              Inference Provider
+            </label>
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => setDraftProvider('custom')}
-                className={`flex items-center gap-2.5 p-3 rounded-xl border text-left transition-all ${
+                className={`flex items-center gap-2.5 p-3 rounded-2xl border text-left transition-all duration-200 ${
                   draftProvider === 'custom'
-                    ? 'border-sky-500 bg-sky-500/10 text-sky-400'
+                    ? isDark
+                      ? 'border-[#0A84FF] bg-[#0A84FF]/15 text-[#0A84FF]'
+                      : 'border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]'
                     : isDark
-                      ? 'border-slate-800 bg-slate-900/50 text-slate-400 hover:border-slate-700'
-                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
+                      ? 'border-white/10 bg-white/[0.04] text-neutral-400 hover:bg-white/[0.08]'
+                      : 'border-black/[0.07] bg-black/[0.03] text-neutral-600 hover:bg-black/[0.06]'
                 }`}
               >
                 <Server className="w-4 h-4 shrink-0" />
@@ -106,12 +112,14 @@ export const SettingsModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setDraftProvider('fal')}
-                className={`flex items-center gap-2.5 p-3 rounded-xl border text-left transition-all ${
+                className={`flex items-center gap-2.5 p-3 rounded-2xl border text-left transition-all duration-200 ${
                   draftProvider === 'fal'
-                    ? 'border-sky-500 bg-sky-500/10 text-sky-400'
+                    ? isDark
+                      ? 'border-[#0A84FF] bg-[#0A84FF]/15 text-[#0A84FF]'
+                      : 'border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]'
                     : isDark
-                      ? 'border-slate-800 bg-slate-900/50 text-slate-400 hover:border-slate-700'
-                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
+                      ? 'border-white/10 bg-white/[0.04] text-neutral-400 hover:bg-white/[0.08]'
+                      : 'border-black/[0.07] bg-black/[0.03] text-neutral-600 hover:bg-black/[0.06]'
                 }`}
               >
                 <Cloud className="w-4 h-4 shrink-0" />
@@ -126,27 +134,27 @@ export const SettingsModal: React.FC = () => {
           {draftProvider === 'custom' ? (
             <div>
               <label className="block text-xs font-medium mb-1.5 opacity-80">
-                Backend Endpoint URL (Colab Tunnel, Cloud Run, or Localhost)
+                Backend Endpoint URL
               </label>
               <input
                 type="url"
                 value={draftUrl}
                 onChange={(e) => setDraftUrl(e.target.value)}
                 placeholder="https://your-tunnel.trycloudflare.com"
-                className={`w-full px-3 py-2 rounded-lg border text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500/40 ${
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono focus:outline-none focus:ring-2 ${
                   isDark
-                    ? 'bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500'
-                    : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400'
+                    ? 'bg-white/[0.06] border-white/10 text-neutral-100 placeholder:text-neutral-500 focus:ring-[#0A84FF]/40'
+                    : 'bg-white/80 border-black/10 text-neutral-900 placeholder:text-neutral-400 focus:ring-[#0071E3]/30'
                 }`}
               />
               <div className="flex gap-2 mt-2">
                 <button
                   type="button"
                   onClick={() => setDraftUrl('http://localhost:8000')}
-                  className={`text-[11px] px-2 py-0.5 rounded border ${
+                  className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
                     isDark
-                      ? 'border-slate-700 text-slate-400 hover:text-slate-200'
-                      : 'border-slate-200 text-slate-600 hover:text-slate-900'
+                      ? 'border-white/10 text-neutral-400 hover:text-neutral-100 hover:bg-white/[0.06]'
+                      : 'border-black/10 text-neutral-600 hover:text-neutral-900 hover:bg-black/[0.04]'
                   }`}
                 >
                   Use Localhost (:8000)
@@ -157,51 +165,51 @@ export const SettingsModal: React.FC = () => {
             <div>
               <label className="block text-xs font-medium mb-1.5 opacity-80">fal.ai API Key</label>
               <div className="relative">
-                <KeyRound className="w-3.5 h-3.5 absolute left-3 top-2.5 opacity-50" />
+                <KeyRound className="w-3.5 h-3.5 absolute left-3.5 top-3 opacity-50" />
                 <input
                   type="password"
                   value={draftFalKey}
                   onChange={(e) => setDraftFalKey(e.target.value)}
                   placeholder="fal_key_..."
-                  className={`w-full pl-8 pr-3 py-2 rounded-lg border text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500/40 ${
+                  className={`w-full pl-9 pr-3.5 py-2.5 rounded-xl border text-xs font-mono focus:outline-none focus:ring-2 ${
                     isDark
-                      ? 'bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500'
-                      : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400'
+                      ? 'bg-white/[0.06] border-white/10 text-neutral-100 placeholder:text-neutral-500 focus:ring-[#0A84FF]/40'
+                      : 'bg-white/80 border-black/10 text-neutral-900 placeholder:text-neutral-400 focus:ring-[#0071E3]/30'
                   }`}
                 />
               </div>
             </div>
           )}
 
-          {/* Optional Gemini / Imagen API Key */}
+          {/* Optional Gemini API Key */}
           <div>
             <label className="block text-xs font-medium mb-1.5 opacity-80">
-              Gemini / Imagen API Key{' '}
-              <span className="opacity-60 font-normal">(Optional — for Text-to-3D reference image)</span>
+              Gemini API Key{' '}
+              <span className="opacity-55 font-normal">(Optional — for Text-to-3D reference image)</span>
             </label>
             <input
               type="password"
               value={draftGeminiKey}
               onChange={(e) => setDraftGeminiKey(e.target.value)}
               placeholder="AIza..."
-              className={`w-full px-3 py-2 rounded-lg border text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500/40 ${
+              className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono focus:outline-none focus:ring-2 ${
                 isDark
-                  ? 'bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500'
-                  : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400'
+                  ? 'bg-white/[0.06] border-white/10 text-neutral-100 placeholder:text-neutral-500 focus:ring-[#0A84FF]/40'
+                  : 'bg-white/80 border-black/10 text-neutral-900 placeholder:text-neutral-400 focus:ring-[#0071E3]/30'
               }`}
             />
           </div>
 
           {/* Live Status Banner */}
           <div
-            className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs ${
+            className={`flex items-center justify-between px-4 py-2.5 rounded-2xl border text-xs ${
               connectionStatus === 'connected'
                 ? isDark
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                  : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  ? 'bg-emerald-500/12 border-emerald-400/25 text-emerald-300'
+                  : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-700'
                 : isDark
-                  ? 'bg-slate-900/70 border-slate-800 text-slate-400'
-                  : 'bg-slate-50 border-slate-200 text-slate-600'
+                  ? 'bg-white/[0.04] border-white/10 text-neutral-400'
+                  : 'bg-black/[0.03] border-black/[0.07] text-neutral-600'
             }`}
           >
             <div className="flex items-center gap-2">
@@ -216,7 +224,7 @@ export const SettingsModal: React.FC = () => {
                   : 'Backend currently unreachable'}
               </span>
             </div>
-            <span className="font-mono text-[11px] opacity-75">localStorage</span>
+            <span className="text-[11px] opacity-65">Saved locally</span>
           </div>
 
           {/* Actions */}
@@ -224,8 +232,8 @@ export const SettingsModal: React.FC = () => {
             <button
               type="button"
               onClick={() => setSettingsOpen(false)}
-              className={`px-3.5 py-2 rounded-lg text-xs font-medium transition-colors ${
-                isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'
+              className={`px-4 py-2 rounded-full text-xs font-medium transition-colors ${
+                isDark ? 'text-neutral-300 hover:bg-white/10' : 'text-neutral-600 hover:bg-black/[0.06]'
               }`}
             >
               Close
@@ -233,7 +241,9 @@ export const SettingsModal: React.FC = () => {
             <button
               type="submit"
               disabled={testing}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-sky-500 hover:bg-sky-400 text-slate-950 transition-colors disabled:opacity-60"
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-white transition-all disabled:opacity-60 ${
+                isDark ? 'bg-[#0A84FF] hover:bg-[#1E90FF]' : 'bg-[#0071E3] hover:bg-[#0077ED]'
+              }`}
             >
               {testing && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Save & Test Connection

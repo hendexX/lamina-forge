@@ -145,8 +145,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   removeBg: true,
   prompt: '',
   resolution: 1024,
-  preset: 'lamina_vet_anatomy',
-  targetTris: PRESET_CONFIG.lamina_vet_anatomy.defaultTris,
+  preset: 'organic_anatomy',
+  targetTris: PRESET_CONFIG.organic_anatomy.defaultTris,
   seed: 42,
 
   isGenerating: false,
@@ -230,7 +230,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     const cfg = PRESET_CONFIG[preset];
     set({
       preset,
-      targetTris: Math.min(cfg.defaultTris, cfg.maxTris),
+      targetTris: cfg.defaultTris,
     });
   },
 
@@ -266,17 +266,22 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   clearToast: () => set({ toast: null }),
 
   synthesizeReferenceImage: async () => {
-    const { prompt, apiUrl, geminiApiKey } = get();
+    const { prompt, preset, apiUrl, geminiApiKey } = get();
     if (!prompt.trim()) {
       set({ error: 'Enter a description to generate a studio reference image.' });
       return;
     }
 
+    const styleGuidance = PRESET_CONFIG[preset]?.promptGuidance;
+    const styledPrompt = styleGuidance
+      ? `${prompt.trim()}, ${styleGuidance}`
+      : prompt.trim();
+
     set({ isGeneratingRef: true, error: null });
     try {
       const { imageDataUrl } = await generateReferenceImage({
         apiUrl,
-        prompt: prompt.trim(),
+        prompt: styledPrompt,
         geminiApiKey,
       });
       const file = await dataUrlToFile(imageDataUrl, 'reference_studio.png');

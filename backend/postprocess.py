@@ -15,9 +15,9 @@ import subprocess
 import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
-PresetType = Literal["lamina_vet_anatomy", "roblox_studio_asset", "raw_high_poly_pbr"]
+PresetType = str
 
 
 @dataclass
@@ -81,18 +81,18 @@ def postprocess_mesh(
     else:
         mesh = loaded
 
-    # 1. Remove small disconnected floating background artifacts
+    # 1. Keep only the largest connected component (or components >= 12% of main face count)
     try:
         components = mesh.split(only_watertight=False)
         if len(components) > 1:
             components.sort(key=lambda c: len(c.faces), reverse=True)
             main_faces = len(components[0].faces)
-            kept = [c for c in components if len(c.faces) >= max(32, int(main_faces * 0.03))]
+            kept = [c for c in components if len(c.faces) >= max(64, int(main_faces * 0.12))]
             mesh = trimesh.util.concatenate(kept) if len(kept) > 1 else components[0]
     except Exception:
         pass
 
-    # 2. Clean degenerate/duplicate faces
+    # 2. Clean degenerate/duplicate faces and seal small surface tears
     try:
         mesh.remove_degenerate_faces()
         mesh.remove_duplicate_faces()
@@ -100,16 +100,34 @@ def postprocess_mesh(
     except Exception:
         pass
 
-    # 3. Preset-specific polycount target
-    effective_target_tris = int(target_tris)
-    if preset == "roblox_studio_asset":
-        effective_target_tris = min(effective_target_tris, 9800)
-    elif preset == "raw_high_poly_pbr":
-        effective_target_tris = max(effective_target_tris, 50000)
+    try:
+        trimesh.repair.fill_holes(mesh)
+        trimesh.repair.fix_normals(mesh)
+    except Exception:
+        pass
 
-    # 4. Quadric decimation if current face count exceeds target
+    # Optional pymeshfix repair only when mesh has no textured UV visual (preserves PBR UVs)
+    try:
+        has_uv = hasattr(mesh.visual, "uv") and mesh.visual.uv is not None and len(mesh.visual.uv) > 0
+        if not has_uv and not mesh.is_watertight:
+            import pymeshfix
+
+            tin = pymeshfix.PyTMesh()
+            tin.load_array(mesh.vertices, mesh.faces)
+            tin.fill_small_boundaries(nbe=100, refine=True)
+            v_fixed, f_fixed = tin.return_arrays()
+            if len(f_fixed) > 0:
+                mesh = trimesh.Trimesh(vertices=v_fixed, faces=f_fixed, process=False)
+                trimesh.repair.fix_normals(mesh)
+    except Exception:
+        pass
+
+    # 3. Exact user-selected triangle budget across all styles
+    effective_target_tris = max(500, int(target_tris))
+
+    # 4. Quadric decimation to match target_tris, then weld & recompute smooth normals
     current_tris = len(mesh.faces)
-    if current_tris > effective_target_tris and effective_target_tris >= 500:
+    if current_tris > effective_target_tris:
         try:
             mesh = mesh.simplify_quadric_decimation(face_count=effective_target_tris)
         except Exception:
@@ -117,6 +135,12 @@ def postprocess_mesh(
                 mesh = mesh.simplify_quadric_decimation(effective_target_tris)
             except Exception:
                 pass
+
+    try:
+        mesh.merge_vertices()
+        _ = mesh.vertex_normals
+    except Exception:
+        pass
 
     # 5. Center horizontally (X=0, Z=0 in glTF Y-up) and rest lowest point cleanly on Y=0
     bounds = mesh.bounds
@@ -127,21 +151,18 @@ def postprocess_mesh(
         min_y = min_pt[1]
         mesh.apply_translation([-center_x, -min_y, -center_z])
 
-        # 6. Preset scale normalization
+        # 6. Style scale normalization
         extents = mesh.extents
         max_dim = float(np.max(extents)) if np.max(extents) > 1e-6 else 1.0
-        if preset == "lamina_vet_anatomy":
-            # Smooth organic shading, Y-up, normalized 2.0m scale
+        if preset in ("organic_anatomy", "lamina_vet_anatomy"):
             scale_factor = 2.0 / max_dim
-            mesh.apply_scale(scale_factor)
-            # Re-seat cleanly on Y=0 after scaling
-            mesh.apply_translation([0.0, -mesh.bounds[0][1], 0.0])
-            _ = mesh.vertex_normals  # ensure smooth vertex normals computed
-        elif preset == "roblox_studio_asset":
-            # Normalized 1.5m studio prop scale with centered pivot at ground
+        elif preset in ("stylized_game_asset", "roblox_studio_asset"):
             scale_factor = 1.5 / max_dim
-            mesh.apply_scale(scale_factor)
-            mesh.apply_translation([0.0, -mesh.bounds[0][1], 0.0])
+        else:
+            scale_factor = 1.8 / max_dim
+        mesh.apply_scale(scale_factor)
+        mesh.apply_translation([0.0, -mesh.bounds[0][1], 0.0])
+        _ = mesh.vertex_normals
 
     output_glb_path.parent.mkdir(parents=True, exist_ok=True)
     mesh.export(str(output_glb_path), file_type="glb")
