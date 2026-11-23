@@ -1,0 +1,21 @@
+# Core API Server
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-multipart>=0.0.12
+pydantic>=2.9.0
+
+# Mesh Post-Processing & Image IO
+numpy>=1.26.4
+pillow>=10.4.0
+trimesh>=4.5.0
+fast-simplification>=0.1.7
+scipy>=1.13.0
+
+# Background Removal (optional in MOCK_MODE, required on GPU worker)
+# rembg[gpu]>=2.0.59
+
+# GPU Inference (installed on Colab L4/A100 or Cloud Run L4 Dockerfile)
+# torch>=2.5.0
+# torchvision>=0.20.0
+# transformers>=4.46.0
+# huggingface_hub>=0.26.0

@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+/* Custom sleek studio scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.28);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+/* Range input styling */
+input[type='range'].studio-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 9999px;
+  outline: none;
+}
+
+input[type='range'].studio-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #38bdf8;
+  border: 2px solid #0f172a;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
+  transition: transform 0.12s ease;
+}
+
+input[type='range'].studio-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.12);
+}
