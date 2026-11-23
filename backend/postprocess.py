@@ -51,7 +51,7 @@ def postprocess_mesh(
 ) -> MeshMetadata:
     """
     Clean and normalize a generated 3D mesh using trimesh (and optional headless Blender CLI).
-    - Removes small disconnected background artifacts
+    - Removes disconnected floating artifacts (retaining only overlapping major components >= 25% of main)
     - Centers horizontally (X=0, Z=0 in glTF Y-up) and rests lowest point cleanly on Y=0
     - Applies preset-specific scale, shading, and polycount limits
     - Applies quadric decimation to match target_tris
@@ -81,14 +81,32 @@ def postprocess_mesh(
     else:
         mesh = loaded
 
-    # 1. Keep only the largest connected component (or components >= 12% of main face count)
+    # 1. Tightened disconnected-island cleanup: keep primary component, plus secondary components
+    #    only if >= 25% of main_faces AND their bounding box overlaps/touches the main body (+5% margin)
     try:
         components = mesh.split(only_watertight=False)
         if len(components) > 1:
             components.sort(key=lambda c: len(c.faces), reverse=True)
-            main_faces = len(components[0].faces)
-            kept = [c for c in components if len(c.faces) >= max(64, int(main_faces * 0.12))]
-            mesh = trimesh.util.concatenate(kept) if len(kept) > 1 else components[0]
+            main_comp = components[0]
+            main_faces = len(main_comp.faces)
+            main_bounds = main_comp.bounds
+            kept = [main_comp]
+            if main_bounds is not None and len(main_bounds) == 2:
+                margin = (main_bounds[1] - main_bounds[0]) * 0.05
+                exp_min = main_bounds[0] - margin
+                exp_max = main_bounds[1] + margin
+                min_faces_threshold = max(64, int(main_faces * 0.25))
+                for comp in components[1:]:
+                    if len(comp.faces) < min_faces_threshold:
+                        continue
+                    c_bounds = comp.bounds
+                    if c_bounds is not None and len(c_bounds) == 2:
+                        overlaps = bool(
+                            np.all(c_bounds[1] >= exp_min) and np.all(c_bounds[0] <= exp_max)
+                        )
+                        if overlaps:
+                            kept.append(comp)
+            mesh = trimesh.util.concatenate(kept) if len(kept) > 1 else main_comp
     except Exception:
         pass
 
@@ -122,10 +140,33 @@ def postprocess_mesh(
     except Exception:
         pass
 
-    # 3. Exact user-selected triangle budget across all styles
-    effective_target_tris = max(500, int(target_tris))
+    # 3. Center horizontally (X=0, Z=0 in glTF Y-up) and rest lowest point cleanly on Y=0
+    bounds = mesh.bounds
+    if bounds is not None and len(bounds) == 2:
+        min_pt, max_pt = bounds[0], bounds[1]
+        center_x = (min_pt[0] + max_pt[0]) * 0.5
+        center_z = (min_pt[2] + max_pt[2]) * 0.5
+        min_y = min_pt[1]
+        mesh.apply_translation([-center_x, -min_y, -center_z])
 
-    # 4. Quadric decimation to match target_tris, then weld & recompute smooth normals
+        # Style scale normalization
+        extents = mesh.extents
+        max_dim = float(np.max(extents)) if np.max(extents) > 1e-6 else 1.0
+        if preset in ("organic_anatomy", "lamina_vet_anatomy"):
+            scale_factor = 2.0 / max_dim
+        elif preset in ("stylized_game_asset", "roblox_studio_asset"):
+            scale_factor = 1.5 / max_dim
+        else:
+            scale_factor = 1.8 / max_dim
+        mesh.apply_scale(scale_factor)
+        mesh.apply_translation([0.0, -mesh.bounds[0][1], 0.0])
+        _ = mesh.vertex_normals
+
+    # 4. Exact user-selected triangle budget across all styles
+    effective_target_tris = max(500, int(target_tris))
+    output_glb_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # 5. Quadric decimation to match target_tris, then weld & recompute smooth normals
     current_tris = len(mesh.faces)
     if current_tris > effective_target_tris:
         try:
@@ -142,29 +183,6 @@ def postprocess_mesh(
     except Exception:
         pass
 
-    # 5. Center horizontally (X=0, Z=0 in glTF Y-up) and rest lowest point cleanly on Y=0
-    bounds = mesh.bounds
-    if bounds is not None and len(bounds) == 2:
-        min_pt, max_pt = bounds[0], bounds[1]
-        center_x = (min_pt[0] + max_pt[0]) * 0.5
-        center_z = (min_pt[2] + max_pt[2]) * 0.5
-        min_y = min_pt[1]
-        mesh.apply_translation([-center_x, -min_y, -center_z])
-
-        # 6. Style scale normalization
-        extents = mesh.extents
-        max_dim = float(np.max(extents)) if np.max(extents) > 1e-6 else 1.0
-        if preset in ("organic_anatomy", "lamina_vet_anatomy"):
-            scale_factor = 2.0 / max_dim
-        elif preset in ("stylized_game_asset", "roblox_studio_asset"):
-            scale_factor = 1.5 / max_dim
-        else:
-            scale_factor = 1.8 / max_dim
-        mesh.apply_scale(scale_factor)
-        mesh.apply_translation([0.0, -mesh.bounds[0][1], 0.0])
-        _ = mesh.vertex_normals
-
-    output_glb_path.parent.mkdir(parents=True, exist_ok=True)
     mesh.export(str(output_glb_path), file_type="glb")
 
     draco_compressed = False

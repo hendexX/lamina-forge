@@ -55,6 +55,13 @@ export interface JobResponse {
   error?: string | null;
 }
 
+export interface OutputFileItem {
+  filename: string;
+  size_bytes: number;
+  created_at: number;
+  download_url: string;
+}
+
 export interface AssetRecord {
   id: string;
   name: string;
@@ -68,6 +75,8 @@ export interface AssetRecord {
   thumbnailDataUrl?: string;
   metadata: MeshStats;
   jobId?: string;
+  downloadUrl?: string;
+  pendingDownload?: boolean;
   glbBuffer: ArrayBuffer;
 }
 

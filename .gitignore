@@ -1,0 +1,83 @@
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+backend/.env
+backend/.env.local
+*.pem
+*.key
+
+# Node / Frontend (Vite + React + TypeScript)
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vercel
+.vercel/
+frontend/.vercel/
+
+# Python / Backend (FastAPI + PyTorch)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+.venv/
+venv/
+env/
+backend/.venv/
+backend/venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Generated 3D Outputs & Model Caches
+backend/outputs/
+outputs/
+cache/
+.cache/
+*.glb
+*.gltf
+*.obj
+*.mtl
+*.stl
+*.fbx
+*.ply
+*.ckpt
+*.safetensors
+*.pt
+*.pth
+*.onnx
+
+# Jupyter / Colab
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# Logs & Temp Files
+*.log
+tmp/
+temp/
+
+# OS & Editors
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

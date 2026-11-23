@@ -2,6 +2,7 @@ import {
   BackendProvider,
   HealthResponse,
   JobResponse,
+  OutputFileItem,
   PresetType,
   ResolutionOption,
 } from '../types/studio';
@@ -127,13 +128,60 @@ export async function fetchJobStatus(apiUrl: string, jobId: string): Promise<Job
   return (await res.json()) as JobResponse;
 }
 
+async function fetchGlbWithRetry(
+  url: string,
+  maxAttempts = 3,
+  backoffMs = 1500,
+): Promise<ArrayBuffer> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) {
+        throw new Error(`Failed to download GLB (${res.status})`);
+      }
+      const buffer = await res.arrayBuffer();
+      if (buffer.byteLength === 0) {
+        throw new Error('Downloaded GLB file was empty');
+      }
+      return buffer;
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => window.setTimeout(resolve, backoffMs));
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('Failed to download GLB after retries');
+}
+
 export async function downloadJobGlb(apiUrl: string, jobId: string): Promise<ArrayBuffer> {
   const base = normalizeUrl(apiUrl);
-  const res = await fetch(`${base}/api/jobs/${encodeURIComponent(jobId)}/download?format=glb`);
+  return await fetchGlbWithRetry(
+    `${base}/api/jobs/${encodeURIComponent(jobId)}/download?format=glb`,
+    3,
+    1500,
+  );
+}
+
+export async function fetchServerOutputs(apiUrl: string): Promise<OutputFileItem[]> {
+  const base = normalizeUrl(apiUrl);
+  if (!base) return [];
+  const res = await fetch(`${base}/api/outputs`, { cache: 'no-store' });
   if (!res.ok) {
-    throw new Error(`Failed to download GLB (${res.status})`);
+    throw new Error(`Failed to list outputs (${res.status})`);
   }
-  return await res.arrayBuffer();
+  const data = (await res.json()) as { outputs?: OutputFileItem[] };
+  return Array.isArray(data.outputs) ? data.outputs : [];
+}
+
+export async function downloadOutputGlb(apiUrl: string, filename: string): Promise<ArrayBuffer> {
+  const base = normalizeUrl(apiUrl);
+  return await fetchGlbWithRetry(
+    `${base}/api/outputs/${encodeURIComponent(filename)}`,
+    3,
+    1500,
+  );
 }
 
 export async function downloadJobFormatFromBackend(

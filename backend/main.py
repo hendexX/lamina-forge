@@ -47,9 +47,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition", "Content-Length"],
 )
 
 runner = TrellisRunner(model_id=MODEL_ID)
@@ -136,11 +137,13 @@ async def text_to_image(
         f"pure solid #FFFFFF background with zero glow, zero smoke, zero ground shadow, crisp silhouette."
     )
 
+    import json as _json
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
     if api_key:
         try:
-            import urllib.request
-            import json as _json
-
             url = (
                 "https://generativelanguage.googleapis.com/v1beta/models/"
                 f"gemini-2.5-flash-image:generateContent?key={api_key}"
@@ -173,10 +176,40 @@ async def text_to_image(
                     "provider": "gemini-2.5-flash-image",
                     "prompt_used": studio_prompt,
                 }
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            logger.warning("Gemini image API HTTP %s: %s", e.code, err_body)
         except Exception as exc:
-            logger.warning("Gemini image request failed (%s); falling back to mock studio preview.", exc)
-            if not MOCK_MODE:
-                raise HTTPException(status_code=502, detail=f"Gemini image API error: {exc}")
+            logger.warning("Gemini image request failed (%s); falling back.", exc)
+
+    if not MOCK_MODE:
+        try:
+            pollinations_url = (
+                f"https://image.pollinations.ai/prompt/{urllib.parse.quote(studio_prompt)}"
+                "?model=flux&width=1024&height=1024&seed=42&nologo=true"
+            )
+            poll_req = urllib.request.Request(
+                pollinations_url,
+                headers={"User-Agent": "LaminaForge/1.0"},
+                method="GET",
+            )
+            with urllib.request.urlopen(poll_req, timeout=45) as resp:
+                img_bytes = resp.read()
+                if not img_bytes:
+                    raise ValueError("Empty image response from Pollinations.")
+                content_type = resp.headers.get("Content-Type", "image/jpeg")
+                mime = content_type.split(";")[0].strip() or "image/jpeg"
+                b64 = base64.b64encode(img_bytes).decode("ascii")
+                return {
+                    "image_data_url": f"data:{mime};base64,{b64}",
+                    "provider": "flux-free-studio",
+                    "prompt_used": studio_prompt,
+                }
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            logger.warning("Pollinations fallback HTTP %s: %s", e.code, err_body)
+        except Exception as exc:
+            logger.warning("Pollinations fallback failed (%s); falling back to SVG studio preview.", exc)
 
     # Deterministic studio-lit SVG reference preview for MOCK_MODE or key-free testing
     safe_label = req.prompt.strip()[:48].replace("<", "").replace(">", "").replace("&", "&amp;")
@@ -334,6 +367,55 @@ async def download_job(
         path=str(out_path),
         media_type=media_types.get(format, "application/octet-stream"),
         filename=f"lamina_forge_{job.preset}_{job.id}.{format}",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@app.get("/api/outputs")
+async def list_outputs():
+    """List all generated .glb files currently saved in OUTPUT_DIR for tunnel-drop recovery."""
+    items = []
+    if OUTPUT_DIR.exists():
+        glb_files = sorted(
+            (p for p in OUTPUT_DIR.glob("*.glb") if p.is_file() and not p.name.endswith("_raw.glb")),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        for p in glb_files:
+            st = p.stat()
+            items.append(
+                {
+                    "filename": p.name,
+                    "size_bytes": st.st_size,
+                    "created_at": st.st_mtime,
+                    "download_url": f"/api/outputs/{p.name}",
+                }
+            )
+    return {"outputs": items}
+
+
+@app.get("/api/outputs/{filename}")
+async def download_output_file(filename: str):
+    """Download a saved .glb file directly from OUTPUT_DIR by filename."""
+    safe_name = Path(filename).name
+    if safe_name != filename or not safe_name.lower().endswith(".glb"):
+        raise HTTPException(status_code=400, detail="Invalid output filename")
+
+    file_path = (OUTPUT_DIR / safe_name).resolve()
+    if file_path.parent != OUTPUT_DIR.resolve() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Output file not found")
+
+    return FileResponse(
+        path=str(file_path),
+        media_type="model/gltf-binary",
+        filename=safe_name,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-store",
+        },
     )
 
 

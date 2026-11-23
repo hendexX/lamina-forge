@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { Box, Clock, Download, FileBox, History, Loader2, Trash2 } from 'lucide-react';
+import {
+  Box,
+  Clock,
+  Download,
+  FileBox,
+  HardDrive,
+  History,
+  Loader2,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react';
 import { useStudioStore } from '../store/useStudioStore';
 import { getStyleShortLabel } from '../types/studio';
 import {
@@ -7,7 +17,9 @@ import {
   exportGlbBuffer,
   exportObjectToObj,
   exportObjectToStl,
+  triggerBlobDownload,
 } from '../services/exporters';
+import { downloadJobFormatFromBackend } from '../services/api';
 
 function formatRelativeTime(ts: number): string {
   const diffSec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
@@ -20,18 +32,26 @@ function formatRelativeTime(ts: number): string {
 export const AssetDrawer: React.FC = () => {
   const {
     theme,
+    provider,
+    connectionStatus,
     assets,
     activeAssetId,
     selectAsset,
     deleteAsset,
+    serverOutputs,
+    isLoadingOutputs,
+    refreshServerOutputs,
+    loadServerOutput,
     activeSceneObject,
     apiUrl,
     showToast,
   } = useStudioStore();
 
   const [exportingFormat, setExportingFormat] = useState<string | null>(null);
+  const [loadingOutputName, setLoadingOutputName] = useState<string | null>(null);
   const isDark = theme === 'dark';
   const activeAsset = assets.find((a) => a.id === activeAssetId) || null;
+  const normalizedApiUrl = apiUrl.trim().replace(/\/+$/, '');
 
   const sanitizeName = (name: string) =>
     name.toLowerCase().replace(/[^a-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'lamina_asset';
@@ -46,6 +66,16 @@ export const AssetDrawer: React.FC = () => {
         exportGlbBuffer(activeAsset.glbBuffer, baseName);
         showToast('success', `Exported ${baseName}.glb`);
       } else if (format === 'obj') {
+        if (activeAsset.jobId && provider !== 'fal' && connectionStatus === 'connected') {
+          try {
+            const blob = await downloadJobFormatFromBackend(apiUrl, activeAsset.jobId, 'obj');
+            triggerBlobDownload(blob, `${baseName}.obj`);
+            showToast('success', `Exported ${baseName}.obj`);
+            return;
+          } catch {
+            // Fall back to client-side OBJ export if backend is unavailable
+          }
+        }
         if (!activeSceneObject) throw new Error('3D scene is still loading.');
         exportObjectToObj(activeSceneObject, baseName);
         showToast('success', `Exported ${baseName}.obj`);
@@ -193,12 +223,16 @@ export const AssetDrawer: React.FC = () => {
                     <div className="flex items-center justify-between mt-1.5">
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                          isDark
-                            ? 'bg-white/[0.08] text-neutral-300'
-                            : 'bg-black/[0.05] text-neutral-600'
+                          asset.pendingDownload || asset.glbBuffer.byteLength === 0
+                            ? 'bg-amber-500/20 text-amber-400'
+                            : isDark
+                              ? 'bg-white/[0.08] text-neutral-300'
+                              : 'bg-black/[0.05] text-neutral-600'
                         }`}
                       >
-                        {getStyleShortLabel(asset.preset)}
+                        {asset.pendingDownload || asset.glbBuffer.byteLength === 0
+                          ? 'Click to retry load'
+                          : getStyleShortLabel(asset.preset)}
                       </span>
                       <span className="flex items-center gap-1 text-[10px] opacity-50">
                         <Clock className="w-2.5 h-2.5" />
@@ -226,6 +260,102 @@ export const AssetDrawer: React.FC = () => {
               </div>
             );
           })
+        )}
+
+        {/* Server Outputs Recovery Section */}
+        {provider !== 'fal' && connectionStatus === 'connected' && (
+          <div
+            className={`mt-4 pt-3 border-t space-y-2 ${
+              isDark ? 'border-white/[0.08]' : 'border-black/[0.06]'
+            }`}
+          >
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] opacity-65">
+                <HardDrive className={`w-3.5 h-3.5 ${isDark ? 'text-[#0A84FF]' : 'text-[#0071E3]'}`} />
+                Server Outputs
+              </div>
+              <button
+                type="button"
+                onClick={() => void refreshServerOutputs()}
+                disabled={isLoadingOutputs}
+                title="Refresh saved server .glb files"
+                className={`p-1 rounded-lg transition-colors ${
+                  isDark
+                    ? 'hover:bg-white/10 text-neutral-400 hover:text-neutral-100'
+                    : 'hover:bg-black/5 text-neutral-500 hover:text-neutral-900'
+                }`}
+              >
+                <RefreshCw className={`w-3 h-3 ${isLoadingOutputs ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            {serverOutputs.length === 0 ? (
+              <p className="px-1 text-[11px] opacity-50">
+                No saved .glb outputs on server yet.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                {serverOutputs.slice(0, 8).map((out) => {
+                  const isLoadingThis = loadingOutputName === out.filename;
+                  const sizeMb = (out.size_bytes / (1024 * 1024)).toFixed(2);
+                  return (
+                    <div
+                      key={out.filename}
+                      className={`rounded-xl border px-2.5 py-2 flex items-center justify-between gap-2 ${
+                        isDark
+                          ? 'border-white/[0.08] bg-white/[0.03]'
+                          : 'border-black/[0.06] bg-white/60'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-medium truncate" title={out.filename}>
+                          {out.filename}
+                        </div>
+                        <div className="text-[10px] opacity-55 tabular-nums">
+                          {sizeMb} MB • {formatRelativeTime(out.created_at * 1000)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          disabled={isLoadingThis}
+                          onClick={async () => {
+                            setLoadingOutputName(out.filename);
+                            try {
+                              await loadServerOutput(out);
+                            } finally {
+                              setLoadingOutputName(null);
+                            }
+                          }}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-colors ${
+                            isDark
+                              ? 'bg-[#0A84FF]/20 text-[#0A84FF] hover:bg-[#0A84FF]/30'
+                              : 'bg-[#0071E3]/10 text-[#0071E3] hover:bg-[#0071E3]/20'
+                          }`}
+                        >
+                          {isLoadingThis ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Load'}
+                        </button>
+                        <a
+                          href={`${normalizedApiUrl}${out.download_url}`}
+                          download={out.filename}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Direct download .glb"
+                          className={`p-1 rounded-lg transition-colors ${
+                            isDark
+                              ? 'hover:bg-white/10 text-neutral-400 hover:text-neutral-100'
+                              : 'hover:bg-black/5 text-neutral-500 hover:text-neutral-900'
+                          }`}
+                        >
+                          <Download className="w-3 h-3" />
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </aside>
