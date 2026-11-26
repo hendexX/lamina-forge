@@ -95,11 +95,20 @@ const LoadedModel: React.FC<LoadedModelProps> = ({
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             mesh.userData.__origMaterial = mesh.material;
-            const stdMat = mesh.material as THREE.MeshStandardMaterial;
-            mesh.userData.__origRoughness =
-              !Array.isArray(mesh.material) && typeof stdMat.roughness === 'number'
-                ? stdMat.roughness
-                : 1.0;
+            if (!Array.isArray(mesh.material)) {
+              const stdMat = mesh.material as THREE.MeshStandardMaterial;
+              mesh.userData.__origRoughness =
+                typeof stdMat.roughness === 'number' ? stdMat.roughness : 1.0;
+              mesh.userData.__origRoughnessMap = stdMat.roughnessMap ?? null;
+              mesh.userData.__origMetalness =
+                typeof stdMat.metalness === 'number' ? stdMat.metalness : 0;
+              mesh.userData.__origMetalnessMap = stdMat.metalnessMap ?? null;
+            } else {
+              mesh.userData.__origRoughness = 1.0;
+              mesh.userData.__origRoughnessMap = null;
+              mesh.userData.__origMetalness = 0;
+              mesh.userData.__origMetalnessMap = null;
+            }
 
             const geom = mesh.geometry;
             if (geom) {
@@ -170,15 +179,33 @@ const LoadedModel: React.FC<LoadedModelProps> = ({
               typeof mesh.userData.__origRoughness === 'number'
                 ? (mesh.userData.__origRoughness as number)
                 : 1.0;
+            const origRoughnessMap =
+              (mesh.userData.__origRoughnessMap as THREE.Texture | null | undefined) ?? null;
+            const origMetalness =
+              typeof mesh.userData.__origMetalness === 'number'
+                ? (mesh.userData.__origMetalness as number)
+                : 0;
+            const origMetalnessMap =
+              (mesh.userData.__origMetalnessMap as THREE.Texture | null | undefined) ?? null;
+
             if (surfaceFinish === 'natural') {
+              std.roughnessMap = origRoughnessMap;
+              std.metalnessMap = origMetalnessMap;
               std.roughness = origRoughness;
-              std.envMapIntensity = 1.1;
+              std.metalness = origMetalness;
+              std.envMapIntensity = 1.0;
             } else if (surfaceFinish === 'glossy') {
+              std.roughnessMap = origRoughnessMap;
+              std.metalnessMap = origMetalnessMap;
               std.roughness = Math.min(origRoughness, 0.55);
+              std.metalness = origMetalness;
               std.envMapIntensity = 2.2;
             } else if (surfaceFinish === 'matte') {
-              std.roughness = Math.max(origRoughness, 0.85);
-              std.envMapIntensity = 0.6;
+              std.roughnessMap = null;
+              std.metalnessMap = null;
+              std.roughness = 0.92;
+              std.metalness = 0.0;
+              std.envMapIntensity = 0.45;
             }
             std.needsUpdate = true;
             mesh.material = origMat;
@@ -334,6 +361,7 @@ export const Viewport3D: React.FC = () => {
         </Environment>
 
         <ambientLight intensity={isDark ? 0.4 : 0.6} />
+        <hemisphereLight args={['#fffaf0', '#2a2a30', 0.65]} />
         <directionalLight
           position={[4, 6, 4]}
           intensity={isDark ? 1.4 : 1.6}
