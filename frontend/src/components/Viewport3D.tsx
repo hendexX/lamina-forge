@@ -98,12 +98,12 @@ const LoadedModel: React.FC<LoadedModelProps> = ({ url, pbrChannel, wireframe, i
         box.getSize(size);
 
         // Center horizontally and rest lowest point flush on Y=0 grid
-        const box = new THREE.Box3().setFromObject(root);
-        if (!box.isEmpty()) {
-          const center = box.getCenter(new THREE.Vector3());
-          root.position.x -= center.x;
-          root.position.z -= center.z;
-          root.position.y -= box.min.y;
+        const alignBox = new THREE.Box3().setFromObject(root);
+        if (!alignBox.isEmpty()) {
+          const alignCenter = alignBox.getCenter(new THREE.Vector3());
+          root.position.x -= alignCenter.x;
+          root.position.z -= alignCenter.z;
+          root.position.y -= alignBox.min.y;
         }
         setSceneGroup(root);
         setActiveSceneObject(root);
