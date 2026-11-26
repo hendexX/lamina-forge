@@ -7,7 +7,7 @@ export type ModelStyle =
 
 export type PresetType = ModelStyle;
 
-export type ResolutionOption = 512 | 1024 | 1536;
+export type ResolutionOption = 512 | 1024;
 
 export type PbrChannel = 'full_pbr' | 'albedo' | 'clay' | 'roughness_metallic';
 
@@ -141,7 +141,6 @@ export function getStyleShortLabel(preset: string): string {
 }
 
 export const RESOLUTION_OPTIONS: { value: ResolutionOption; label: string; tag: string }[] = [
-  { value: 512, label: '512³', tag: 'Draft' },
+  { value: 512, label: '512³', tag: 'Fast' },
   { value: 1024, label: '1024³', tag: 'Balanced' },
-  { value: 1536, label: '1536³', tag: 'Ultra' },
 ];

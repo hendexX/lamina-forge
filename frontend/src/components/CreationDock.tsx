@@ -330,7 +330,7 @@ export const CreationDock: React.FC = () => {
             Quality
           </label>
           <div
-            className={`grid grid-cols-3 p-1 rounded-xl gap-1 ${
+            className={`grid grid-cols-2 p-1 rounded-xl gap-1 ${
               isDark ? 'bg-black/35' : 'bg-black/[0.05]'
             }`}
           >

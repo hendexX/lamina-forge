@@ -136,6 +136,15 @@ async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
   return new File([blob], filename, { type: blob.type || 'image/png' });
 }
 
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read blob as data URL'));
+    reader.readAsDataURL(blob);
+  });
+}
+
 export const useStudioStore = create<StudioState>((set, get) => ({
   provider: initialSettings.provider,
   apiUrl: initialSettings.apiUrl,
@@ -422,17 +431,36 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       if (!get().imageFile) return;
     }
 
-    const activeFile = get().imageFile;
-    const activePreview = get().imagePreviewUrl;
+    let activeFile = get().imageFile;
+    let activePreview = get().imagePreviewUrl;
 
     set({
       isGenerating: true,
-      currentStage: 'Removing Background',
+      currentStage: state.removeBg && activeFile ? 'Removing background...' : 'Preparing Generation',
       progress: 8,
       error: null,
     });
 
     try {
+      if (state.removeBg && activeFile) {
+        try {
+          const { removeBackground } = await import('@imgly/background-removal');
+          const cutoutBlob = await removeBackground(activeFile);
+          const baseName = activeFile.name.replace(/\.[^.]+$/, '') || 'image';
+          const cutoutFile = new File([cutoutBlob], `${baseName}_nobg.png`, {
+            type: 'image/png',
+          });
+          const cutoutDataUrl = await blobToDataUrl(cutoutBlob);
+          activeFile = cutoutFile;
+          activePreview = cutoutDataUrl;
+          set({
+            imageFile: cutoutFile,
+            imagePreviewUrl: cutoutDataUrl,
+          });
+        } catch (bgErr) {
+          console.warn('Browser background removal failed, falling back to original image:', bgErr);
+        }
+      }
       let glbBuffer: ArrayBuffer;
       let metadata: MeshStats;
       let jobId: string | undefined;
