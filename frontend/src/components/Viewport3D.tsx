@@ -97,6 +97,14 @@ const LoadedModel: React.FC<LoadedModelProps> = ({ url, pbrChannel, wireframe, i
         const size = new THREE.Vector3();
         box.getSize(size);
 
+        // Center horizontally and rest lowest point flush on Y=0 grid
+        const box = new THREE.Box3().setFromObject(root);
+        if (!box.isEmpty()) {
+          const center = box.getCenter(new THREE.Vector3());
+          root.position.x -= center.x;
+          root.position.z -= center.z;
+          root.position.y -= box.min.y;
+        }
         setSceneGroup(root);
         setActiveSceneObject(root);
         setLiveMeshStats({
@@ -137,7 +145,8 @@ const LoadedModel: React.FC<LoadedModelProps> = ({ url, pbrChannel, wireframe, i
         if (origMat && !Array.isArray(origMat)) {
           const std = origMat as THREE.MeshStandardMaterial;
           if (pbrChannel === 'full_pbr') {
-            std.envMapIntensity = 1.6;
+            std.envMapIntensity = 2.2;
+            std.roughness = Math.min(typeof std.roughness === 'number' ? std.roughness : 1.0, 0.55);
             std.needsUpdate = true;
             mesh.material = origMat;
           } else if (pbrChannel === 'clay') {
