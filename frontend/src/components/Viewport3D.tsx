@@ -137,6 +137,8 @@ const LoadedModel: React.FC<LoadedModelProps> = ({ url, pbrChannel, wireframe, i
         if (origMat && !Array.isArray(origMat)) {
           const std = origMat as THREE.MeshStandardMaterial;
           if (pbrChannel === 'full_pbr') {
+            std.envMapIntensity = 1.6;
+            std.needsUpdate = true;
             mesh.material = origMat;
           } else if (pbrChannel === 'clay') {
             mesh.material = clayMaterial;
@@ -264,7 +266,7 @@ export const Viewport3D: React.FC = () => {
         <Environment resolution={256}>
           <Lightformer
             form="rect"
-            intensity={2.4}
+            intensity={4.5}
             color="#ffffff"
             scale={[6, 6, 1]}
             position={[0, 6, 2]}
@@ -272,7 +274,7 @@ export const Viewport3D: React.FC = () => {
           />
           <Lightformer
             form="rect"
-            intensity={1.5}
+            intensity={3.0}
             color="#eef6ff"
             scale={[4, 4, 1]}
             position={[5, 2.5, 4]}
@@ -280,7 +282,7 @@ export const Viewport3D: React.FC = () => {
           />
           <Lightformer
             form="rect"
-            intensity={1.2}
+            intensity={2.2}
             color="#fff7ed"
             scale={[4, 3, 1]}
             position={[-5, 2, -3]}
