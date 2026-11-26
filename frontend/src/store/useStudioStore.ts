@@ -101,7 +101,6 @@ interface StudioState {
   setRemoveBg: (v: boolean) => void;
   setPrompt: (prompt: string) => void;
   setResolution: (res: ResolutionOption) => void;
-  setPreset: (preset: PresetType) => void;
   setTargetTris: (tris: number) => void;
   setSeed: (seed: number) => void;
   randomizeSeed: () => void;
@@ -340,14 +339,6 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   setRemoveBg: (removeBg) => set({ removeBg }),
   setPrompt: (prompt) => set({ prompt }),
   setResolution: (resolution) => set({ resolution }),
-
-  setPreset: (preset) => {
-    const cfg = PRESET_CONFIG[preset];
-    set({
-      preset,
-      targetTris: cfg.defaultTris,
-    });
-  },
 
   setTargetTris: (targetTris) => set({ targetTris }),
   setSeed: (seed) => set({ seed: Number.isFinite(seed) ? Math.max(0, Math.floor(seed)) : 42 }),

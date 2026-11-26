@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
 import {
-  ChevronDown,
   Dices,
   Eraser,
   Image as ImageIcon,
@@ -12,7 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { useStudioStore } from '../store/useStudioStore';
-import { MODEL_STYLES, ModelStyle, RESOLUTION_OPTIONS } from '../types/studio';
+import { RESOLUTION_OPTIONS } from '../types/studio';
 
 const SAMPLE_PROMPTS = [
   'Equine hoof anatomical cross-section',
@@ -48,8 +47,6 @@ export const CreationDock: React.FC = () => {
     setPrompt,
     resolution,
     setResolution,
-    preset,
-    setPreset,
     targetTris,
     setTargetTris,
     seed,
@@ -67,7 +64,6 @@ export const CreationDock: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const isDark = theme === 'dark';
-  const activeStyle = MODEL_STYLES[preset] || MODEL_STYLES.organic_anatomy;
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith('image/')) return;
@@ -326,38 +322,6 @@ export const CreationDock: React.FC = () => {
               className="accent-[#0071E3] dark:accent-[#0A84FF] w-4 h-4 rounded"
             />
           </label>
-        </div>
-
-        {/* Model Style Dropdown */}
-        <div className="space-y-2">
-          <label className="text-[11px] font-semibold uppercase tracking-[0.06em] opacity-60">
-            Model Style
-          </label>
-          <div className="relative">
-            <select
-              value={preset}
-              onChange={(e) => setPreset(e.target.value as ModelStyle)}
-              className={`w-full appearance-none rounded-xl border px-3.5 py-2.5 pr-9 text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 ${
-                isDark
-                  ? 'bg-white/[0.06] border-white/10 text-neutral-100 focus:ring-[#0A84FF]/40'
-                  : 'bg-white/80 border-black/10 text-neutral-900 focus:ring-[#0071E3]/30'
-              }`}
-            >
-              {(Object.keys(MODEL_STYLES) as ModelStyle[]).map((styleKey) => (
-                <option
-                  key={styleKey}
-                  value={styleKey}
-                  className={isDark ? 'bg-neutral-900 text-neutral-100' : 'bg-white text-neutral-900'}
-                >
-                  {MODEL_STYLES[styleKey].label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-55" />
-          </div>
-          <p className={`text-[11px] leading-relaxed ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
-            {activeStyle.description}
-          </p>
         </div>
 
         {/* Quality / Voxel Grid */}
