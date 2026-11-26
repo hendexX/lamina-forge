@@ -12,10 +12,13 @@ import {
   RotateCcw,
   RotateCw,
   Ruler,
+  Sparkles,
   Triangle,
 } from 'lucide-react';
 import { useStudioStore } from '../store/useStudioStore';
 import { getStyleShortLabel, PbrChannel } from '../types/studio';
+
+type SurfaceFinish = 'matte' | 'natural' | 'glossy';
 
 const CHANNEL_OPTIONS: { id: PbrChannel; label: string }[] = [
   { id: 'full_pbr', label: 'Full PBR' },
@@ -24,14 +27,27 @@ const CHANNEL_OPTIONS: { id: PbrChannel; label: string }[] = [
   { id: 'roughness_metallic', label: 'Rough / Metal' },
 ];
 
+const FINISH_OPTIONS: { id: SurfaceFinish; label: string }[] = [
+  { id: 'matte', label: 'Matte' },
+  { id: 'natural', label: 'Natural' },
+  { id: 'glossy', label: 'Glossy' },
+];
+
 interface LoadedModelProps {
   url: string;
   pbrChannel: PbrChannel;
+  surfaceFinish: SurfaceFinish;
   wireframe: boolean;
   isDark: boolean;
 }
 
-const LoadedModel: React.FC<LoadedModelProps> = ({ url, pbrChannel, wireframe, isDark }) => {
+const LoadedModel: React.FC<LoadedModelProps> = ({
+  url,
+  pbrChannel,
+  surfaceFinish,
+  wireframe,
+  isDark,
+}) => {
   const setLiveMeshStats = useStudioStore((s) => s.setLiveMeshStats);
   const setActiveSceneObject = useStudioStore((s) => s.setActiveSceneObject);
   const [sceneGroup, setSceneGroup] = useState<THREE.Group | null>(null);
@@ -79,6 +95,11 @@ const LoadedModel: React.FC<LoadedModelProps> = ({ url, pbrChannel, wireframe, i
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             mesh.userData.__origMaterial = mesh.material;
+            const stdMat = mesh.material as THREE.MeshStandardMaterial;
+            mesh.userData.__origRoughness =
+              !Array.isArray(mesh.material) && typeof stdMat.roughness === 'number'
+                ? stdMat.roughness
+                : 1.0;
 
             const geom = mesh.geometry;
             if (geom) {
@@ -145,8 +166,20 @@ const LoadedModel: React.FC<LoadedModelProps> = ({ url, pbrChannel, wireframe, i
         if (origMat && !Array.isArray(origMat)) {
           const std = origMat as THREE.MeshStandardMaterial;
           if (pbrChannel === 'full_pbr') {
-            std.envMapIntensity = 2.2;
-            std.roughness = Math.min(typeof std.roughness === 'number' ? std.roughness : 1.0, 0.55);
+            const origRoughness =
+              typeof mesh.userData.__origRoughness === 'number'
+                ? (mesh.userData.__origRoughness as number)
+                : 1.0;
+            if (surfaceFinish === 'natural') {
+              std.roughness = origRoughness;
+              std.envMapIntensity = 1.1;
+            } else if (surfaceFinish === 'glossy') {
+              std.roughness = Math.min(origRoughness, 0.55);
+              std.envMapIntensity = 2.2;
+            } else if (surfaceFinish === 'matte') {
+              std.roughness = Math.max(origRoughness, 0.85);
+              std.envMapIntensity = 0.6;
+            }
             std.needsUpdate = true;
             mesh.material = origMat;
           } else if (pbrChannel === 'clay') {
@@ -189,7 +222,7 @@ const LoadedModel: React.FC<LoadedModelProps> = ({ url, pbrChannel, wireframe, i
       createdWireMeshes.forEach((w) => w.parent?.remove(w));
       createdMaterials.forEach((m) => m.dispose());
     };
-  }, [sceneGroup, pbrChannel, wireframe, clayMaterial, wireMaterial]);
+  }, [sceneGroup, pbrChannel, surfaceFinish, wireframe, clayMaterial, wireMaterial]);
 
   if (!sceneGroup) return null;
   return <primitive object={sceneGroup} />;
@@ -244,6 +277,7 @@ export const Viewport3D: React.FC = () => {
     activeAssetId,
   } = useStudioStore();
 
+  const [surfaceFinish, setSurfaceFinish] = useState<SurfaceFinish>('natural');
   const isDark = theme === 'dark';
   const fogHex = isDark ? '#161618' : '#EFEFF4';
   const activeAsset = assets.find((a) => a.id === activeAssetId);
@@ -334,6 +368,7 @@ export const Viewport3D: React.FC = () => {
           <LoadedModel
             url={activeGlbUrl}
             pbrChannel={pbrChannel}
+            surfaceFinish={surfaceFinish}
             wireframe={wireframe}
             isDark={isDark}
           />
@@ -454,6 +489,41 @@ export const Viewport3D: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Surface Finish Segmented Control */}
+        {pbrChannel === 'full_pbr' && (
+          <div
+            title="Surface Finish"
+            className={`flex items-center gap-1 p-1 rounded-full border backdrop-blur-2xl shadow-[0_16px_40px_rgba(0,0,0,0.14)] ${
+              isDark
+                ? 'bg-neutral-900/75 border-white/12 text-neutral-300'
+                : 'bg-white/80 border-white/60 text-neutral-700'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 mx-2 opacity-55 hidden sm:block" />
+            {FINISH_OPTIONS.map((opt) => {
+              const active = surfaceFinish === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setSurfaceFinish(opt.id)}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200 ${
+                    active
+                      ? isDark
+                        ? 'bg-[#0A84FF] text-white shadow-sm'
+                        : 'bg-[#0071E3] text-white shadow-sm'
+                      : isDark
+                        ? 'hover:bg-white/10 text-neutral-300'
+                        : 'hover:bg-black/[0.06] text-neutral-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Viewport Toggles */}
         <div
